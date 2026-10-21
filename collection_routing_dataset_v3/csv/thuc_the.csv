@@ -1,0 +1,13 @@
+﻿thuc_the_id,bo_khach_hang_id,so_khach_hang,so_can_bo,so_ngay,phut_lam_viec_ngay,m_mac_dinh,mo_ta
+INS_XS,MAIN,30,2,5,480,3,"Nhỏ, kiểm tra định tuyến và MILP chính xác"
+INS_S,MAIN,80,2,5,480,2,"Nhỏ-vừa, MILP"
+INS_M,MAIN,200,3,5,480,2,"Vừa, MILP có giới hạn thời gian, có thể cần heuristic"
+INS_L,MAIN,500,4,5,480,2,"Lớn, heuristic và so sánh với cận tốt nhất"
+REP1_S,REP1,80,2,5,480,2,"Lặp độc lập trên bộ REP1, cỡ như INS_S"
+REP1_M,REP1,200,3,5,480,2,"Lặp độc lập trên bộ REP1, cỡ như INS_M"
+REP2_S,REP2,80,2,5,480,2,"Lặp độc lập trên bộ REP2, cỡ như INS_S"
+REP2_M,REP2,200,3,5,480,2,"Lặp độc lập trên bộ REP2, cỡ như INS_M"
+REP3_S,REP3,80,2,5,480,2,"Lặp độc lập trên bộ REP3, cỡ như INS_S"
+REP3_M,REP3,200,3,5,480,2,"Lặp độc lập trên bộ REP3, cỡ như INS_M"
+REP4_S,REP4,80,2,5,480,2,"Lặp độc lập trên bộ REP4, cỡ như INS_S"
+REP4_M,REP4,200,3,5,480,2,"Lặp độc lập trên bộ REP4, cỡ như INS_M"

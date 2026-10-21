@@ -1,0 +1,6 @@
+﻿bo_khach_hang_id,so_khach_hang,seed,seed_monte_carlo,mo_ta
+MAIN,500,20261020,29261020,"Bộ chính, dùng cho các thể hiện lồng nhau INS_XS ⊂ INS_S ⊂ INS_M ⊂ INS_L"
+REP1,200,20261121,29261121,Bộ lặp độc lập 1 (seed khác) để kiểm tra độ vững của kết luận
+REP2,200,20261222,29261222,Bộ lặp độc lập 2
+REP3,200,20261323,29261323,Bộ lặp độc lập 3
+REP4,200,20261424,29261424,Bộ lặp độc lập 4

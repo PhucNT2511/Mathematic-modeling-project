@@ -1,0 +1,6 @@
+{
+  "instance": "INS_XS",
+  "mixed_samples": 30,
+  "alns_iterations": 100,
+  "seed": 2026
+}

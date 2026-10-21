@@ -1,0 +1,14 @@
+﻿highway,ten_loai_duong,toc_do_kmh,so_canh
+trunk,Đường trục chính,30,401
+trunk_link,Nhánh nối đường trục,25,85
+primary,Đường chính,28,4032
+primary_link,Nhánh nối đường chính,22,645
+secondary,Đường cấp 2,25,4962
+secondary_link,Nhánh nối cấp 2,20,279
+tertiary,Đường cấp 3,22,8971
+tertiary_link,Nhánh nối cấp 3,18,192
+unclassified,Đường không phân cấp,18,84
+residential,Đường khu dân cư/ngõ,15,32587
+road,Đường chưa phân loại,15,0
+living_street,Ngõ nhỏ/đường nội bộ dân cư,10,18
+service,Đường phục vụ/ngách,10,77964

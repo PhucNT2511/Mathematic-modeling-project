@@ -1,0 +1,16 @@
+name = "DebtCollectionRouting"
+uuid = "83ff6f3f-caf9-4ad7-a85e-7962a92bef36"
+version = "0.1.0"
+
+[deps]
+HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
+
+[compat]
+HiGHS = "1"
+JSON = "1"
+JuMP = "1"
+MathOptInterface = "1"
+julia = "1.9"

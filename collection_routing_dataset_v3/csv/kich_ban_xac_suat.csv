@@ -1,0 +1,4 @@
+﻿kich_ban_p,he_so_nhan,chan_tren,mo_ta,nguon
+THAP,0.5,0.95,"Kịch bản thấp: p cơ sở × 0,5",Giả định
+CO_SO,1.0,0.95,Kịch bản cơ sở (giả định),Giả định
+CAO,1.5,0.95,"Kịch bản cao: p cơ sở × 1,5, chặn trên 0,95",Giả định

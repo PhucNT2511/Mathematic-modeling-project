@@ -1,0 +1,7 @@
+{
+    "data_profile": "n80",
+    "benchmark_profile": "auto",
+    "exact_time_limit_seconds": 300,
+    "seed": 2026,
+    "generate_if_missing": true
+}

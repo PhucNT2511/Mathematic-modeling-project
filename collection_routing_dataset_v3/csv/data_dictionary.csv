@@ -1,0 +1,172 @@
+﻿bang,cot,kieu,khoa,mo_ta
+tham_so_mo_hinh,tham_so,text,PK,Tên tham số
+tham_so_mo_hinh,gia_tri,text,,Giá trị
+tham_so_mo_hinh,don_vi,text,,Đơn vị
+tham_so_mo_hinh,mo_ta,text,,Ý nghĩa
+tham_so_mo_hinh,nguon,text,,Tài liệu / Giả định / OSM / UCI / văn bản
+ngay_ky,ngay_thu,int,PK,Chỉ số ngày t ∈ T = {1..5}
+ngay_ky,ngay,date,,Ngày dương lịch
+ngay_ky,thu,text,,Thứ trong tuần
+tham_so_nhom_no,nhom_no,int,PK,Nhóm nợ 2–5
+tham_so_nhom_no,ten_nhom,text,,Tên nhóm theo TT 11/2021
+tham_so_nhom_no,dpd_min,int,,DPD nhỏ nhất của nhóm trong danh sách thu hồi thực địa
+tham_so_nhom_no,dpd_max,int,,DPD lớn nhất
+tham_so_nhom_no,ty_trong,float,,"Tỷ trọng nhóm trong danh sách (tham chiếu công bố, xem nguon_du_lieu CO_CAU_NHOM_NO)"
+tham_so_nhom_no,p_co_so,float,,"p ngày 1 tại DPD nhỏ nhất, kịch bản CO_SO (giả định)"
+tham_so_nhom_no,ty_le_giam_ngay,float,,Tỷ lệ giảm p mỗi ngày (giả định)
+tham_so_nhom_no,phut_phuc_vu_min,int,,Thời gian phục vụ tối thiểu (phút)
+tham_so_nhom_no,phut_phuc_vu_max,int,,Thời gian phục vụ tối đa (phút)
+tham_so_nhom_no,so_khach_hang_main,int,,Số khách của nhóm trong bộ MAIN
+tham_so_nhom_no,alpha_dpd,float,,Hệ số giảm p theo vị trí DPD trong nhóm
+tham_so_nhom_no,nguon_ty_trong,text,,Nguồn của ty_trong
+tham_so_nhom_no,nguon_p,text,,Nguồn của p (giả định)
+tham_so_san_pham,loai_san_pham,text,PK,Sản phẩm
+tham_so_san_pham,trong_so,float,,Trọng số chọn sản phẩm trong các sản phẩm đủ điều kiện (giả định)
+tham_so_san_pham,lai_suat_nam,float,,Lãi suất trong hạn/năm (giả định)
+tham_so_san_pham,ky_han_thang,text,,"Các kỳ hạn được chọn (tháng), rỗng với thẻ"
+tham_so_san_pham,co_tai_san_bao_dam,int 0/1,,1 nếu có tài sản bảo đảm
+tham_so_san_pham,trung_vi_goc_vnd,int,,"Trung vị số tiền giải ngân, hoặc hạn mức với thẻ"
+tham_so_san_pham,sigma_log,float,,Độ lệch chuẩn log của phân phối log-chuẩn (rỗng với thẻ: dùng phân bố UCI)
+tham_so_san_pham,tran_vnd,int,,Trần số tiền
+tham_so_san_pham,nguon_phan_bo,text,,Nguồn phân bố số tiền
+kich_ban_xac_suat,kich_ban_p,text,PK,THAP / CO_SO / CAO
+kich_ban_xac_suat,he_so_nhan,float,,Nhân với p cơ sở
+kich_ban_xac_suat,chan_tren,float,,Chặn trên của p
+kich_ban_xac_suat,mo_ta,text,,Mô tả
+kich_ban_xac_suat,nguon,text,,Giả định
+toc_do_loai_duong,highway,text,PK,Giá trị thẻ highway của OSM
+toc_do_loai_duong,ten_loai_duong,text,,Tên tiếng Việt
+toc_do_loai_duong,toc_do_kmh,int,,Tốc độ xe máy mặc định (giả định); dùng maxspeed nếu nhỏ hơn
+toc_do_loai_duong,so_canh,int,,Số cung của loại này
+nut_duong,node_id,int64,PK,"ID nút OSM (đã rút gọn: nút giao, nút cụt, nút đổi thuộc tính)"
+nut_duong,lat,float,,Vĩ độ WGS84
+nut_duong,lon,float,,Kinh độ WGS84
+nut_duong,quan_cu,text,,"Quận trước 01/07/2025 (ranh giới OSM boundary=historic), rỗng nếu ngoài 6 quận"
+nut_duong,phuong_2025,text,,Phường từ 01/07/2025 (ranh giới OSM admin_level=6)
+nut_duong,trong_vung_nghien_cuu,int 0/1,,1 nếu trong khung lấy mẫu; 0 là vùng đệm định tuyến
+canh_duong,edge_id,int,PK,Mã cung
+canh_duong,u,int64,FK nut_duong,Nút đầu
+canh_duong,v,int64,FK nut_duong,Nút cuối
+canh_duong,osm_way_id,int64,,Way OSM của đoạn đầu chuỗi
+canh_duong,highway,text,FK toc_do_loai_duong,Loại đường
+canh_duong,ten_duong,text,,Tên đường trong OSM (có thể rỗng)
+canh_duong,oneway,int 0/1,,1 nếu đường một chiều với xe máy
+canh_duong,length_m,float,,Độ dài (m)
+canh_duong,toc_do_kmh,float,,Tốc độ áp dụng
+canh_duong,travel_time_s,float,,Thời gian đi (giây)
+phuong_lay_mau,phuong_2025,text,PK,Phường 2025
+phuong_lay_mau,osm_relation_id,int64,,Relation OSM
+phuong_lay_mau,dan_so_2025,int,,Dân số phường (thẻ OSM population)
+phuong_lay_mau,nguon_dan_so,text,,source:population
+phuong_lay_mau,ngay_dan_so,date,,population:date
+phuong_lay_mau,dien_tich_km2,float,,Diện tích phường (lưới 50 m)
+phuong_lay_mau,dien_tich_trong_vung_km2,float,,Phần diện tích nằm trong 6 quận cũ ∩ khung lấy mẫu
+phuong_lay_mau,dan_so_uoc_trong_vung,float,,Dân số × tỷ lệ diện tích trong vùng
+phuong_lay_mau,ty_trong_mau,float,,Tỷ trọng hạn ngạch khách hàng
+chi_nhanh,chi_nhanh_id,text,PK,CN01
+chi_nhanh,ten_chi_nhanh,text,,Tên (giả định)
+chi_nhanh,osm_poi_id,int64,,Node POI ngân hàng trong OSM
+chi_nhanh,ten_poi_osm,text,,Tên POI trong OSM
+chi_nhanh,dia_chi_osm,text,,addr:housenumber + addr:street của POI trong OSM
+chi_nhanh,quan_cu,text,,Quận cũ
+chi_nhanh,phuong_2025,text,,Phường 2025
+chi_nhanh,node_id,int64,FK nut_duong,Nút mạng gần POI nhất
+chi_nhanh,lat,float,,Vĩ độ nút
+chi_nhanh,lon,float,,Kinh độ nút
+chi_nhanh,khoang_cach_poi_den_nut_m,float,,Khoảng cách POI → nút (m)
+chi_nhanh,gio_mo_cua,time,,Giờ mở cửa
+chi_nhanh,gio_dong_cua,time,,Giờ đóng cửa
+can_bo,can_bo_id,text,PK,Mã cán bộ (không dùng tên người)
+can_bo,chi_nhanh_id,text,FK chi_nhanh,Chi nhánh
+can_bo,phuong_tien,text,,Xe máy
+can_bo,gio_bat_dau,time,,Giờ bắt đầu
+can_bo,gio_ket_thuc,time,,Giờ kết thúc
+can_bo,phut_nghi_trua,int,,Nghỉ trưa
+can_bo,phut_lam_viec_ngay,int,,480 phút
+can_bo,so_ngay_san_sang,int,,Số ngày làm việc trong kỳ
+bo_khach_hang,bo_khach_hang_id,text,PK,"MAIN, REP1..REP4"
+bo_khach_hang,so_khach_hang,int,,Số khách
+bo_khach_hang,seed,int,,"Seed sinh vị trí, hồ sơ, khoản nợ"
+bo_khach_hang,seed_monte_carlo,int,,Seed của luồng số ngẫu nhiên Monte Carlo (tách khỏi bộ sinh dữ liệu và bộ giải)
+bo_khach_hang,mo_ta,text,,Mục đích
+khach_hang,khach_hang_id,text,PK,<bộ>_KHxxxx
+khach_hang,bo_khach_hang_id,text,FK bo_khach_hang,Bộ khách hàng
+khach_hang,persona_uuid,text,,uuid hồ sơ Nemotron
+khach_hang,persona_row_idx,int,,Chỉ số dòng trong split train
+khach_hang,gioi_tinh,text,,Từ Nemotron
+khach_hang,tuoi,int,,Từ Nemotron (lọc 20–65)
+khach_hang,tinh_trang_hon_nhan,text,,Từ Nemotron
+khach_hang,trinh_do_hoc_van,text,,Từ Nemotron
+khach_hang,nghe_nghiep,text,,Từ Nemotron
+khach_hang,nhom_nghe,text,,Gộp nghề để xét điều kiện sản phẩm (không dùng cho p)
+khach_hang,quan_cu,text,,Quận cũ của nút
+khach_hang,phuong_2025,text,FK phuong_lay_mau,Phường 2025 của nút
+khach_hang,node_id,int64,FK nut_duong,"Nút mạng đặt khách hàng (vị trí xấp xỉ, không phải địa chỉ đã xác minh)"
+khach_hang,lat,float,,Vĩ độ nút
+khach_hang,lon,float,,Kinh độ nút
+khach_hang,so_cong_trinh_100m,int,,Số công trình OSM trong 100 m (trọng số chọn nút)
+khach_hang,chi_nhanh_id,text,FK chi_nhanh,Chi nhánh quản lý
+khach_hang,loai_san_pham,text,FK tham_so_san_pham,Sản phẩm
+khach_hang,co_tai_san_bao_dam,int 0/1,,Có tài sản bảo đảm
+khach_hang,lai_suat_nam,float,,Lãi suất/năm
+khach_hang,ky_han_thang,int,,Kỳ hạn (rỗng với thẻ)
+khach_hang,so_ky_da_tra,int,,Số kỳ đã trả trước khi quá hạn (rỗng với thẻ)
+khach_hang,goc_hoac_han_muc_vnd,int,,"Số tiền giải ngân, hoặc hạn mức thẻ"
+khach_hang,tra_gop_hoac_toi_thieu_vnd,int,,"Kỳ trả góp, hoặc thanh toán tối thiểu thẻ"
+khach_hang,tong_du_no_vnd,int,,TỔNG DƯ NỢ gốc còn lại (thẻ: dư nợ sao kê)
+khach_hang,nhom_no,int,FK tham_so_nhom_no,Nhóm nợ
+khach_hang,so_ngay_qua_han,int,,DPD đầu kỳ
+khach_hang,so_ky_qua_han,int,,⌈DPD/30⌉
+khach_hang,cach_tinh_qua_han,text,,Quy tắc tính khoản quá hạn
+khach_hang,so_tien_qua_han_vnd,int,,KHOẢN QUÁ HẠN: các kỳ quá hạn + lãi quá hạn; nhóm 4–5 không bảo đảm: toàn bộ dư nợ + lãi quá hạn
+khach_hang,so_tien_muc_tieu_vnd,int,,w(i) – MỤC TIÊU THU HỒI của một lần tiếp cận thành công (= khoản quá hạn); thất bại thu 0
+khach_hang,thoi_gian_phuc_vu_phut,int,,Thời gian làm việc tại khách mỗi lần (15–30 phút)
+xac_suat_thu_hoi,khach_hang_id,text,FK khach_hang,Khách
+xac_suat_thu_hoi,kich_ban_p,text,FK kich_ban_xac_suat,Kịch bản
+xac_suat_thu_hoi,ngay_thu,int,FK ngay_ky,t
+xac_suat_thu_hoi,ngay,date,,Ngày
+xac_suat_thu_hoi,p_thu_hoi,float,,"p(i,t) – GIẢ ĐỊNH"
+lich_tiep_can,lich_id,text,PK,<khách>_Sxx
+lich_tiep_can,khach_hang_id,text,FK khach_hang,Khách
+lich_tiep_can,tap_ngay,text,,"S, các ngày nối bằng '-'"
+lich_tiep_can,so_lan,int,,|S|; mô hình lọc so_lan ≤ m
+lich_tiep_can,v_vnd_thap,int,,"v(i,S) kịch bản THAP"
+lich_tiep_can,v_vnd_co_so,int,,"v(i,S) kịch bản CO_SO"
+lich_tiep_can,v_vnd_cao,int,,"v(i,S) kịch bản CAO"
+ma_tran_di_chuyen,bo_khach_hang_id,text,"PK, FK bo_khach_hang",Bộ
+ma_tran_di_chuyen,tu_id,text,PK,CN01 hoặc khách
+ma_tran_di_chuyen,den_id,text,PK,CN01 hoặc khách
+ma_tran_di_chuyen,khoang_cach_km,float,,Quãng đường trên tuyến nhanh nhất
+ma_tran_di_chuyen,thoi_gian_phut,float,,Thời gian tuyến nhanh nhất (Dijkstra)
+thuc_the,thuc_the_id,text,PK,Mã thể hiện
+thuc_the,bo_khach_hang_id,text,FK bo_khach_hang,Bộ khách hàng nguồn
+thuc_the,so_khach_hang,int,,Số khách
+thuc_the,so_can_bo,int,,Số cán bộ mặc định
+thuc_the,so_ngay,int,,5
+thuc_the,phut_lam_viec_ngay,int,,Mặc định 480
+thuc_the,m_mac_dinh,int,,m mặc định
+thuc_the,mo_ta,text,,Mục đích
+thuc_the_khach_hang,thuc_the_id,text,"PK, FK thuc_the",Thể hiện
+thuc_the_khach_hang,khach_hang_id,text,"PK, FK khach_hang",Khách
+thuc_the_can_bo,thuc_the_id,text,"PK, FK thuc_the",Thể hiện
+thuc_the_can_bo,can_bo_id,text,"PK, FK can_bo",Cán bộ
+thiet_ke_thi_nghiem,thi_nghiem_id,text,PK,Mã cấu hình
+thiet_ke_thi_nghiem,thuc_the_id,text,FK thuc_the,Thể hiện
+thiet_ke_thi_nghiem,so_can_bo,int,,2/3/4
+thiet_ke_thi_nghiem,phut_lam_viec_ngay,int,,360/420/480
+thiet_ke_thi_nghiem,m,int,,1/2/3
+thiet_ke_thi_nghiem,kich_ban_p,text,FK kich_ban_xac_suat,THAP/CO_SO/CAO
+thiet_ke_thi_nghiem,so_kich_ban_mc,int,,Số kịch bản Monte Carlo dùng
+thiet_ke_thi_nghiem,muc_uu_tien,int,,1 = cấu hình cơ sở; 2 = đổi đúng một yếu tố so với cơ sở; 3 = tổ hợp đầy đủ
+kich_ban_monte_carlo,kich_ban_id,int,PK,s = 1..100
+kich_ban_monte_carlo,khach_hang_id,text,"PK, FK khach_hang",Khách
+kich_ban_monte_carlo,ngay_thu,int,"PK, FK ngay_ky",t
+kich_ban_monte_carlo,u,float,,"Số ngẫu nhiên chung; lần tiếp cận (i,t) thành công nếu u < p(i,t) của kịch bản p đang xét"
+nguon_du_lieu,nguon_id,text,PK,Mã nguồn
+nguon_du_lieu,loai,text,,Dữ liệu thật / số liệu công bố / giả định
+nguon_du_lieu,ten_nguon,text,,Tên
+nguon_du_lieu,url,text,,Đường dẫn
+nguon_du_lieu,phien_ban_thoi_diem,text,,"Phiên bản, ngày trích xuất"
+nguon_du_lieu,giay_phep,text,,Giấy phép
+nguon_du_lieu,dung_cho,text,,Dùng cho bảng/cột nào
+nguon_du_lieu,ghi_chu,text,,"Phạm vi, số lượng, giới hạn"

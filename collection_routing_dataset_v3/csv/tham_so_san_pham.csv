@@ -1,0 +1,6 @@
+﻿loai_san_pham,trong_so,lai_suat_nam,ky_han_thang,co_tai_san_bao_dam,trung_vi_goc_vnd,sigma_log,tran_vnd,nguon_phan_bo
+Thẻ tín dụng,0.3,0.3,,0,30000000,,200000000,Hình dạng phân bố hạn mức và tỷ lệ sử dụng: UCI (khách trễ ≥ 2 tháng); trung vị hạn mức 30 triệu: giả định
+Vay tiêu dùng tín chấp,0.35,0.2,24;36;48;60,0,60000000,0.6,500000000,Giả định (log-chuẩn)
+Vay mua xe,0.12,0.1,48;60;72,1,350000000,0.45,1500000000,Giả định (log-chuẩn)
+Vay thế chấp nhà,0.08,0.09,120;180;240,1,1500000000,0.5,6000000000,Giả định (log-chuẩn)
+Vay kinh doanh hộ cá thể,0.15,0.11,24;36;60,1,300000000,0.7,3000000000,Giả định (log-chuẩn)

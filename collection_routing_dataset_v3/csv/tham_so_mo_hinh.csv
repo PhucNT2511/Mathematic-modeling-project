@@ -1,0 +1,17 @@
+﻿tham_so,gia_tri,don_vi,mo_ta,nguon
+seed,20261020,,"Seed gốc (mỗi bộ khách hàng có seed riêng, xem bo_khach_hang)",Giả định
+ngay_bat_dau,2026-11-02,ngày,Ngày đầu kỳ thu hồi (Thứ Hai),Giả định
+so_ngay_ky,5,ngày,|T|,Tài liệu
+phut_lam_viec_ngay,480,phút,Giờ làm việc tối đa của một cán bộ mỗi ngày,Tài liệu
+m_toi_da_trong_lich,3,lần,"Lịch được tính sẵn tới |S| = 5; mô hình lọc so_lan ≤ m (m = 1, 2, 3)",Tài liệu
+mo_hinh_thu_tien,TOAN_BO_HOAC_KHONG,,Một lần tiếp cận thành công thu đủ so_tien_muc_tieu_vnd; thất bại thu 0; khách đã trả không tiếp cận nữa,Giả định [GĐ-TIEN]
+phuong_tien,Xe máy,,"Mạng đường lọc theo quyền đi của xe máy (motorway, motorcycle=no bị loại)",Giả định + OSM
+nguon_mang_duong,Geofabrik vietnam-latest.osm.pbf,,Dữ liệu OSM đến 2026-10-18T20:25:06Z (theo trang Geofabrik); tải 2026-10-20T08:55:54.324Z,OSM
+vung_nghien_cuu,lat 20.980–21.050; lon 105.775–105.870,độ,"Khung lấy mẫu khách hàng; mạng định tuyến có vùng đệm ~1,5 km",Giả định
+quan_lay_mau,Hoàn Kiếm;Ba Đình;Đống Đa;Hai Bà Trưng;Cầu Giấy;Thanh Xuân,,"Khách hàng chỉ nằm trong 6 quận cũ (ranh giới OSM boundary=historic, hết hiệu lực 30/6/2025)",OSM
+phan_bo_khach_hang,Hạn ngạch theo dân số phường 2025 × tỷ lệ diện tích trong vùng; trong phường chọn nút ∝ số công trình trong 100 m; cách nhau ≥ 40 m,,"Lấy mẫu có chủ đích, không chọn đều các nút đường",OSM + Giả định
+so_kich_ban_monte_carlo,100,kịch bản,Số ngẫu nhiên chung cho mọi chính sách (common random numbers),Giả định
+alpha_dpd,0.3,,Hệ số giảm p theo vị trí DPD trong nhóm,Giả định
+lai_qua_han_he_so,1.5,,Lãi trên gốc quá hạn = 150% lãi trong hạn,TT 39/2016/TT-NHNN
+thanh_toan_toi_thieu_the,0.05,,Tỷ lệ thanh toán tối thiểu thẻ tín dụng mỗi kỳ,Giả định
+trung_vi_han_muc_the_vnd,30000000,VND,Trung vị hạn mức thẻ (hình dạng phân bố lấy từ UCI),Giả định + UCI

@@ -1,0 +1,5 @@
+﻿nhom_no,ten_nhom,dpd_min,dpd_max,ty_trong,p_co_so,ty_le_giam_ngay,phut_phuc_vu_min,phut_phuc_vu_max,so_khach_hang_main,alpha_dpd,nguon_ty_trong,nguon_p
+2,Nợ cần chú ý,31,90,0.478,0.35,0.06,15,20,239,0.3,Tham chiếu công bố (VPBank Q1/2025; 27 NH niêm yết 2024),Giả định (chưa có dữ liệu kết quả tiếp cận)
+3,Nợ dưới tiêu chuẩn,91,180,0.178,0.22,0.05,18,25,89,0.3,Tham chiếu công bố (VPBank Q1/2025; 27 NH niêm yết 2024),Giả định (chưa có dữ liệu kết quả tiếp cận)
+4,Nợ nghi ngờ,181,360,0.218,0.12,0.04,22,30,109,0.3,Tham chiếu công bố (VPBank Q1/2025; 27 NH niêm yết 2024),Giả định (chưa có dữ liệu kết quả tiếp cận)
+5,Nợ có khả năng mất vốn,361,720,0.126,0.06,0.03,22,30,63,0.3,Tham chiếu công bố (VPBank Q1/2025; 27 NH niêm yết 2024),Giả định (chưa có dữ liệu kết quả tiếp cận)

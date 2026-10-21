@@ -1,0 +1,33 @@
+{
+  "instance": "INS_XS",
+  "seed": 2026,
+  "split": {
+    "train": [1, 60],
+    "validation": [61, 80],
+    "test": [81, 100]
+  },
+  "rl": {
+    "epochs": 2,
+    "alpha": 0.2,
+    "gamma": 0.9,
+    "epsilon_start": 0.5,
+    "epsilon_end": 0.05
+  },
+  "ga": {
+    "population_size": 24,
+    "generations": 60,
+    "stagnation_generations": 20
+  },
+  "tabu": {
+    "iterations": 40,
+    "neighborhood_size": 15,
+    "tabu_tenure": 8
+  },
+  "alns": {
+    "iterations": 50
+  },
+  "branch_and_cut": {
+    "time_limit_seconds": 20,
+    "mip_gap": 0.001
+  }
+}
