@@ -88,6 +88,9 @@ function run_v3_comparison(config_path)
             data;
             time_limit=Float64(exact_config["time_limit_seconds"]),
             mip_gap=Float64(exact_config["mip_gap"]),
+            minimize_distance=Bool(get(exact_config, "minimize_distance", false)),
+            distance_time_limit=Float64(get(exact_config, "distance_time_limit_seconds",
+                exact_config["time_limit_seconds"])),
         )),
     )
 

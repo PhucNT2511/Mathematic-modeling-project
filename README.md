@@ -410,6 +410,56 @@ bình tiền thu và chênh lệch ghép cặp với BnC trong `dynamic_aggregat
 tốt hơn từ một lần mô phỏng. Đây vẫn là mô phỏng
 với xác suất giả định, không phải dữ liệu thu nợ thực tế.
 
+## So sánh chính sách tĩnh và cuốn chiếu (đúng quy trình đề xuất)
+
+`core/run_v3_static_vs_rolling.jl` so hai chính sách trên **cùng số ngẫu nhiên**
+`u(s,i,t)` của `kich_ban_monte_carlo.csv` (common random numbers):
+
+- **Tĩnh:** giải một lần cho cả kỳ. Khi thực hiện, khách đã trả được bỏ qua;
+  cán bộ đi thẳng tới khách kế tiếp chưa trả trong tuyến và không dùng thời gian
+  rảnh để thăm thêm.
+- **Cuốn chiếu:** đầu mỗi ngày giải lại cho các ngày còn lại với khách chưa trả và
+  số lượt còn lại; chỉ thực hiện tuyến của ngày đó (dùng `run_dynamic_method`).
+- Thành công khi `u < p(i,t)` của kịch bản p đang xét; thu đủ tiền mục tiêu hoặc 0.
+
+Cấu hình trong `v3_static_vs_rolling.json`: `instance`, `methods`
+(`ALNS`, `GA`, `Tabu`, `Branch-and-Cut`), `p_scenarios` (`THAP`, `CO_SO`, `CAO`)
+và `monte_carlo_range` (ví dụ `[1, 100]`) hoặc `monte_carlo_ids`.
+
+```bat
+set JULIA_DEPOT_PATH=D:\JuliaDepot
+cd /d D:\Mathematical_modeling
+D:\julia-1.13.2\bin\julia.exe --project=. core\run_v3_static_vs_rolling.jl
+```
+
+Kết quả trong `results/v3_<instance>/static_vs_rolling/`:
+
+- `runs.csv`: từng kịch bản Monte Carlo, tiền thu, quãng đường, số lượt và thời
+  gian tính của hai chính sách.
+- `paired_summary.csv`: trung bình hai chính sách, chênh lệch ghép cặp
+  (cuốn chiếu − tĩnh), độ lệch chuẩn, **khoảng tin cậy 95%** (phân phối t),
+  tỷ lệ kịch bản cuốn chiếu tốt hơn, thời gian tính.
+
+## Bước giải lần hai: tối thiểu quãng đường
+
+Đề xuất yêu cầu giải hai bước theo thứ tự từ điển. `solve_branch_and_cut` có
+tham số `minimize_distance=true`: sau khi có giá trị kỳ vọng tối ưu Z*, thêm ràng
+buộc giá trị kỳ vọng ≥ Z* − 1e-6·max(1, |Z*|) rồi tối thiểu tổng quãng đường, dùng
+nghiệm lần một làm MIP start. Bật trong JSON bằng `"minimize_distance": true` và
+`"distance_time_limit_seconds"` ở mục `branch_and_cut`. Trạng thái trả về có
+dạng `OPTIMAL+DIST_OPTIMAL`; nếu lần hai không trả nghiệm thì giữ nghiệm lần một
+(`..._KEEP_STAGE1`).
+
+## Đọc CSV v3
+
+`data_processing/load_v3_data.jl` đọc các bảng v3 **theo tên cột** và tách dòng
+đúng chuẩn CSV (ô trong ngoặc kép có thể chứa dấu phẩy, ví dụ nghề "Nghỉ hưu,
+làm thêm bán thời gian"). Trước đây việc tách bằng dấu phẩy làm lệch cột ở 12
+khách, khiến thời gian phục vụ bị đọc thành số tiền (INS_M 3 khách, INS_L 6
+khách, các bộ REP 1–3 khách mỗi thể hiện). Bộ đọc giờ báo lỗi nếu thời gian phục
+vụ ra ngoài 15–30 phút hoặc số cột của một dòng không khớp tiêu đề. Kết quả cũ
+của INS_M, INS_L và REP cần chạy lại.
+
 ## Train/test cho chính sách RL động
 
 `core/run_v3_rl_experiment.jl` học một **Q-learning dạng bảng**, không phải mạng

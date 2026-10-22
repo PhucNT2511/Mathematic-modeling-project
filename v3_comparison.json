@@ -17,6 +17,8 @@
   },
   "branch_and_cut": {
     "time_limit_seconds": 120,
-    "mip_gap": 0.0001
+    "mip_gap": 0.0001,
+    "minimize_distance": true,
+    "distance_time_limit_seconds": 60
   }
 }

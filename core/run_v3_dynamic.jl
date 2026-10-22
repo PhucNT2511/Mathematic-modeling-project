@@ -44,7 +44,10 @@ function run_dynamic_method(label, data, customer_ids, draws, scenario_id, confi
             warm_start = solve_alns(residual; iterations=Int(config["alns"]["iterations"]),
                                     seed=seed + day - 1)
             solve_branch_and_cut(residual; time_limit=Float64(c["time_limit_seconds"]),
-                mip_gap=Float64(c["mip_gap"]), initial_result=warm_start)
+                mip_gap=Float64(c["mip_gap"]), initial_result=warm_start,
+                minimize_distance=Bool(get(c, "minimize_distance", false)),
+                distance_time_limit=Float64(get(c, "distance_time_limit_seconds",
+                    c["time_limit_seconds"])))
         else
             error("Unknown method: $solver_label")
         end

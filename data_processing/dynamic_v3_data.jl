@@ -1,21 +1,25 @@
 if !isdefined(Main, :DebtRoutingData)
     include(joinpath(@__DIR__, "..", "core", "model.jl"))
 end
+if !isdefined(Main, :v3_table)
+    include(joinpath(@__DIR__, "load_v3_data.jl"))
+end
 
 """Read common random draws for selected Monte Carlo scenarios and customers."""
 function load_v3_draws(root, customer_ids, horizon, scenario_ids)
     customer_index = Dict(id => i for (i, id) in enumerate(customer_ids))
     draws = Dict(id => fill(NaN, length(customer_ids), horizon) for id in scenario_ids)
-    for line in Iterators.drop(eachline(joinpath(root, "csv", "kich_ban_monte_carlo.csv")), 1)
-        fields = split(line, ',')
-        id = parse(Int, fields[1])
+    col, rows = v3_table(joinpath(root, "csv"), "kich_ban_monte_carlo",
+        ["kich_ban_id", "khach_hang_id", "ngay_thu", "u"])
+    for fields in rows
+        id = parse(Int, fields[col["kich_ban_id"]])
         haskey(draws, id) || continue
-        i = get(customer_index, fields[2], 0)
+        i = get(customer_index, fields[col["khach_hang_id"]], 0)
         i == 0 && continue
-        t = parse(Int, fields[3])
+        t = parse(Int, fields[col["ngay_thu"]])
         1 <= t <= horizon || continue
-        isnan(draws[id][i, t]) || error("Duplicate Monte Carlo draw: $id, $(fields[2]), $t")
-        draws[id][i, t] = parse(Float64, fields[4])
+        isnan(draws[id][i, t]) || error("Duplicate Monte Carlo draw: $id, $(fields[col["khach_hang_id"]]), $t")
+        draws[id][i, t] = parse(Float64, fields[col["u"]])
     end
     for (id, values) in draws
         all(x -> isfinite(x) && 0 <= x <= 1, values) ||
