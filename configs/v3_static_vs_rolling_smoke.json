@@ -6,7 +6,7 @@
   "methods": ["ALNS"],
   "include_myopic": true,
   "ga": {"population_size": 80, "generations": 300, "stagnation_generations": 75},
-  "tabu": {"iterations": 150, "neighborhood_size": 40, "tabu_tenure": 15},
-  "alns": {"iterations": 150},
+  "tabu": {"iterations": 150, "neighborhood_size": 40, "tabu_tenure": 15, "stagnation_iterations": 50},
+  "alns": {"iterations": 150, "stagnation_iterations": 50},
   "branch_and_cut": {"time_limit_seconds": 60, "mip_gap": 0.0001, "minimize_distance": false}
 }

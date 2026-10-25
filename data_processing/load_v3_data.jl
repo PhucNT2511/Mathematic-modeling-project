@@ -2,14 +2,12 @@ if !isdefined(Main, :DebtRoutingData)
     include(joinpath(@__DIR__, "..", "core", "model.jl"))
 end
 
-# Bộ đọc CSV v3 theo TÊN cột.
-# Một số ô có dấu phẩy bên trong ngoặc kép (ví dụ nghề "Nghỉ hưu, làm thêm bán
-# thời gian"), nên không được tách dòng bằng split(line, ','). Hàm csv_fields
-# tách đúng theo chuẩn RFC 4180 cho một dòng; các bảng v3 không có xuống dòng
-# bên trong ô. Các bảng lớn vẫn được đọc theo luồng để INS_XS không phải nạp
-# toàn bộ ma trận.
+# Reader for the v3 CSV tables, by column name. Some quoted cells contain commas,
+# so lines are split with csv_fields (RFC 4180, no line breaks inside cells) rather
+# than split(line, ','). Tables are streamed, so a small instance does not load the
+# whole travel matrix.
 
-"""Tách một dòng CSV, tôn trọng ô trong ngoặc kép và dấu "" thoát."""
+"""Split one CSV line, handling quoted cells and "" escapes."""
 function csv_fields(line::AbstractString)
     fields = String[]
     buf = IOBuffer()
@@ -42,12 +40,12 @@ function csv_fields(line::AbstractString)
     return fields
 end
 
-"""Mở một bảng v3, trả về (chỉ số cột theo tên, iterator các dòng dữ liệu)."""
+"""Open a v3 table; return (column index by name, iterator over data rows)."""
 function v3_table(csvdir::AbstractString, name::AbstractString, required)
     path = joinpath(csvdir, name * ".csv")
     lines = eachline(path)
     header_line, state = iterate(lines)
-    header = csv_fields(replace(header_line, "﻿" => ""))   # bỏ BOM UTF-8
+    header = csv_fields(replace(header_line, "﻿" => ""))   # strip the UTF-8 BOM
     col = Dict(h => i for (i, h) in enumerate(header))
     missing_cols = [c for c in required if !haskey(col, c)]
     isempty(missing_cols) || error("$name.csv is missing columns: $(join(missing_cols, ", "))")
@@ -100,8 +98,8 @@ function load_v3_data(root::AbstractString, instance::AbstractString; scenario="
     for f in rows
         i = get(customer_index, f[col["khach_hang_id"]], 0)
         i == 0 && continue
-        debt[i] = parse(Float64, f[col["so_tien_muc_tieu_vnd"]]) / 1e6      # triệu đồng
-        service_time[i] = parse(Float64, f[col["thoi_gian_phuc_vu_phut"]]) / 60  # giờ
+        debt[i] = parse(Float64, f[col["so_tien_muc_tieu_vnd"]]) / 1e6      # million VND
+        service_time[i] = parse(Float64, f[col["thoi_gian_phuc_vu_phut"]]) / 60  # hours
     end
 
     probability = fill(NaN, n, H)
@@ -128,11 +126,11 @@ function load_v3_data(root::AbstractString, instance::AbstractString; scenario="
         j = get(point_index, f[col["den_id"]], 0)
         (i == 0 || j == 0) && continue
         distance[i, j] = parse(Float64, f[col["khoang_cach_km"]])
-        travel_time[i, j] = parse(Float64, f[col["thoi_gian_phut"]]) / 60     # giờ
+        travel_time[i, j] = parse(Float64, f[col["thoi_gian_phut"]]) / 60     # hours
     end
 
     all(isfinite, debt) && all(debt .> 0) || error("Missing customer debt")
-    # Đề xuất: 15–30 phút mỗi lần tiếp cận. Giá trị ngoài khoảng này là dấu hiệu đọc lệch cột.
+    # Service times are 15-30 minutes by design; anything else means a misread column.
     all(x -> isfinite(x) && 0.25 - 1e-9 <= x <= 0.5 + 1e-9, service_time) ||
         error("Service time outside 15–30 minutes; check column parsing")
     all(isfinite, probability) || error("Incomplete probability table")

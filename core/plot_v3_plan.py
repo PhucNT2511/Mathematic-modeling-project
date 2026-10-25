@@ -1,16 +1,14 @@
-"""Vẽ bản đồ khách hàng và tuyến thăm từ file kế hoạch do export_v3_plan.jl tạo.
+"""Maps of customers and routes from a plan written by export_v3_plan.jl.
 
-Cách dùng: python core/plot_v3_plan.py outputs/plans/plan_INS_S_n80_H5.csv [...]
+Usage: python core/plot_v3_plan.py outputs/plans/plan_INS_S_n80_H5.csv [...]
 
-Mỗi cán bộ một họ màu (xanh, đỏ, tím, vàng, lục); trong một họ, ngày 1 đậm nhất
-và nhạt dần đến ngày cuối. Hình được ghi vào figures/<tên kế hoạch>/:
-- customers.png: vị trí khách, cỡ điểm theo số tiền mục tiêu, màu theo nhóm nợ;
-- graph.png: mạng đường OSM (tầng dữ liệu) và đồ thị đầy đủ G=(V,A) (tầng mô hình);
-- routes_grid.png: lưới cán bộ x ngày, khách đánh số theo thứ tự thăm;
-- routes_overview.png: mọi tuyến của mọi cán bộ, mọi ngày trên một bản đồ;
-- routes_by_day.png: mỗi ngày một ô, các cán bộ cùng ngày;
-- routes_by_officer.png: mỗi cán bộ một ô, các ngày đậm-nhạt dần;
-- schedule.png: lịch khách x ngày, ô tô màu cán bộ-ngày.
+Each officer has one colour family, darkest on day 1. Output in figures/<plan>/:
+- customers.png: customer locations, size by target amount, colour by debt group;
+- graph.png: OSM road network (data layer) and complete graph G=(V,A) (model layer);
+- routes_grid.png: officer x day panels, customers numbered in visiting order;
+- routes_overview.png: all routes on one map;
+- routes_by_day.png, routes_by_officer.png: one panel per day / per officer;
+- schedule.png: customer x day schedule.
 """
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
@@ -29,9 +27,8 @@ from matplotlib.lines import Line2D
 ROOT = Path(__file__).resolve().parents[1]
 CSV = ROOT / "collection_routing_dataset_v3" / "csv"
 FIGURES = ROOT / "figures"
-# Màu gốc dịu mắt (độ bão hòa vừa phải) cho từng cán bộ: xanh dương, đỏ san hô, tím oải hương, vàng hổ phách, xanh ngọc.
 BASE_COLORS = ["#3e7cb1", "#e0605e", "#8e6bbf", "#e3a33b", "#3ba99c"]
-FAMILY_NAMES = ["xanh", "đỏ", "tím", "vàng", "ngọc"]
+FAMILY_NAMES = ["blue", "red", "purple", "yellow", "teal"]
 FAMILIES = BASE_COLORS
 GROUP_COLORS = {2: "#8fcf9b", 3: "#f2d16b", 4: "#f0a35e", 5: "#d9534f"}
 ROAD = "#e5e9f0"
@@ -43,14 +40,14 @@ def _mix(color, other, w):
 
 
 def shade(k, t, H):
-    """Màu của cán bộ k ngày t: ngày 1 đậm (pha đen 15%), ngày H nhạt (pha trắng 40%)."""
+    """Officer k's colour on day t: 15% black on day 1 down to 40% white on day H."""
     base = BASE_COLORS[(k - 1) % len(BASE_COLORS)]
     x = 0.0 if H == 1 else (t - 1) / (H - 1)
     return _mix(base, "black", 0.15 * (1 - 2 * x)) if x <= 0.5 else _mix(base, "white", 0.40 * (2 * x - 1))
 
 
 def text_color(rgb):
-    """Chữ trắng trên nền đậm, chữ đen trên nền nhạt."""
+    """White text on dark fills, dark text on light ones."""
     r, g, b = rgb[:3]
     return "white" if 0.299 * r + 0.587 * g + 0.114 * b < 0.62 else "#1a202c"
 
@@ -68,7 +65,7 @@ def load_points(plan):
 
 
 def all_customers(instance, n):
-    """n khách đầu của instance (kể cả khách không được thăm), cùng thứ tự với load_v3_data."""
+    """First n customers of the instance, visited or not, in load_v3_data order."""
     links = pd.read_csv(CSV / "thuc_the_khach_hang.csv", encoding="utf-8-sig")
     ids = links[links.thuc_the_id == instance].khach_hang_id.head(n)
     customers = pd.read_csv(CSV / "khach_hang.csv", encoding="utf-8-sig")
@@ -122,8 +119,8 @@ class Plotter:
         self.K = int(self.plan.officer.max())
         self.outdir = FIGURES / stem
         self.outdir.mkdir(parents=True, exist_ok=True)
-        self.title = (f"{self.instance}: {len(self.points) - 1} khách được thăm, "
-                      f"{self.K} cán bộ, {self.H} ngày")
+        self.title = (f"{self.instance}: {len(self.points) - 1} customers visited, "
+                      f"{self.K} officers, {self.H} days")
         self.cache = {}
 
     def road_path(self, a, b):
@@ -143,7 +140,7 @@ class Plotter:
         segments = [self.road_path(a, b) for a, b in zip(seq, seq[1:])]
         ax.add_collection(LineCollection(segments, colors=[color], lw=lw,
                                          alpha=0.9, zorder=3 + (self.H - t) * 0.01))
-        # Mũi tên ở giữa mỗi chặng cho biết chiều đi.
+        # Arrow at the middle of each leg shows the direction.
         for seg in segments:
             if len(seg) >= 2:
                 m = len(seg) // 2
@@ -164,7 +161,7 @@ class Plotter:
         officers = officers or range(1, self.K + 1)
         days = days or range(1, self.H + 1)
         handles = [Line2D([], [], color=shade(k, t, self.H), lw=3,
-                          label=f"CB{k} – ngày {t}")
+                          label=f"Officer {k} – day {t}")
                    for k in officers for t in days]
         ax.legend(handles=handles, fontsize=7.5, ncol=len(list(officers)),
                   framealpha=0.92, **kw)
@@ -180,11 +177,11 @@ class Plotter:
             sel = everyone.nhom_no == g
             edge = ["#1a202c" if i in visited else "white" for i in everyone.index[sel]]
             ax.scatter(everyone.lon[sel], everyone.lat[sel], s=size[sel], color=color,
-                       edgecolor=edge, lw=0.8, alpha=0.9, zorder=4, label=f"nhóm nợ {g}")
+                       edgecolor=edge, lw=0.8, alpha=0.9, zorder=4, label=f"debt group {g}")
         draw_depot(ax, self.points)
         ax.legend(fontsize=9, loc="lower left", framealpha=0.92,
-                  title="cỡ điểm ∝ số tiền mục tiêu\nviền đen = được thăm", title_fontsize=8)
-        ax.set_title(f"{self.instance}: vị trí {len(everyone)} khách hàng và chi nhánh (★)",
+                  title="marker size ∝ target amount\nblack edge = visited", title_fontsize=8)
+        ax.set_title(f"{self.instance}: locations of {len(everyone)} customers and the branch (★)",
                      fontsize=12)
         self.save(fig, "customers")
 
@@ -204,8 +201,8 @@ class Plotter:
                 color="#e53e3e", lw=1.2, ls="--", zorder=4)
         ax.scatter(self.points.lon[1:], self.points.lat[1:], s=16, color="#4a5568", zorder=5)
         draw_depot(ax, self.points)
-        ax.set_title(f"Tầng dữ liệu: mạng đường OSM ({len(self.shown):,} cạnh trong khung)\n"
-                     f"đỏ liền = đường ngắn nhất; đỏ đứt = một cung (i, j) của mô hình, "
+        ax.set_title(f"Data layer: OSM road network ({len(self.shown):,} edges in view)\n"
+                     f"solid red = shortest path; dashed red = one model arc (i, j), "
                      f"{route.leg_km.iloc[j]:.1f} km", fontsize=10)
         ax = axes[1]
         setup(ax, points)
@@ -219,9 +216,12 @@ class Plotter:
             ax.annotate("0" if name == "CN01" else str(i), (points.lon[name], points.lat[name]),
                         xytext=(3, 3), textcoords="offset points", fontsize=7, zorder=6)
         n = len(labels) - 1
-        ax.set_title(f"Tầng mô hình: đồ thị đầy đủ G = (V, A) (minh họa {n} khách)\n"
-                     f"|V| = {n + 1} đỉnh, |A| = n(n+1) = {n * (n + 1)} cung có hướng",
+        ax.set_title(f"Model layer: complete graph G = (V, A) (showing {n} customers)\n"
+                     f"|V| = {n + 1} nodes, |A| = n(n+1) = {n * (n + 1)} directed arcs",
                      fontsize=10)
+        # Same map extent in both panels, so they have the same size and scale.
+        ax.set_xlim(axes[0].get_xlim())
+        ax.set_ylim(axes[0].get_ylim())
         self.save(fig, "graph")
 
     def figure_overview(self):
@@ -232,8 +232,8 @@ class Plotter:
             self.draw_route(ax, k, t, stops, lw=2.4, size=90)
         draw_depot(ax, self.points)
         self.legend(ax, loc="lower left")
-        ax.set_title(f"{self.title}\nmỗi cán bộ một màu; ngày 1 đậm nhất, nhạt dần đến "
-                     f"ngày {self.H}", fontsize=12)
+        ax.set_title(f"{self.title}\none colour per officer; day 1 darkest, fading towards "
+                     f"day {self.H}", fontsize=12)
         self.save(fig, "routes_overview")
 
     def figure_by_day(self):
@@ -249,9 +249,9 @@ class Plotter:
                 if day != t:
                     continue
                 self.draw_route(ax, k, t, stops)
-                notes.append(f"CB{k}: {len(stops) - 2} khách, {stops.leg_km.sum():.1f} km")
+                notes.append(f"Officer {k}: {len(stops) - 2} customers, {stops.leg_km.sum():.1f} km")
             draw_depot(ax, self.points)
-            ax.set_title(f"Ngày {t}\n" + (" | ".join(notes) or "không ai ra ngoài"),
+            ax.set_title(f"Day {t}\n" + (" | ".join(notes) or "no routes"),
                          fontsize=10)
         for ax in list(axes.flat)[self.H:]:
             ax.axis("off")
@@ -271,8 +271,8 @@ class Plotter:
                     total += stops.leg_km.sum()
             draw_depot(ax, self.points)
             self.legend(ax, officers=[k], loc="lower left")
-            ax.set_title(f"Cán bộ {k} (họ màu {FAMILY_NAMES[(k - 1) % len(FAMILIES)]}): "
-                         f"{total:.1f} km trong {self.H} ngày", fontsize=11)
+            ax.set_title(f"Officer {k} ({FAMILY_NAMES[(k - 1) % len(FAMILIES)]} shades): "
+                         f"{total:.1f} km over {self.H} days", fontsize=11)
         fig.suptitle(self.title, fontsize=13)
         self.save(fig, "routes_by_officer")
 
@@ -288,30 +288,30 @@ class Plotter:
                 color = shade(k, t, self.H) if k else "#f1f4f8"
                 ax.add_patch(plt.Rectangle((t - 1, r), 0.94, 0.88, color=color))
                 if k and len(cust) <= 90:
-                    ax.text(t - 0.53, r + 0.44, f"CB{k}", ha="center", va="center",
+                    ax.text(t - 0.53, r + 0.44, f"O{k}", ha="center", va="center",
                             fontsize=6, color="white" if t <= self.H / 2 + 1 else "#1a202c")
         ax.set_xlim(0, self.H)
         ax.set_ylim(len(cust), 0)
         ax.set_xticks([t - 0.53 for t in range(1, self.H + 1)],
-                      [f"Ngày {t}" for t in range(1, self.H + 1)])
+                      [f"Day {t}" for t in range(1, self.H + 1)])
         step = 1 if len(cust) <= 60 else 5
         ax.set_yticks([r + 0.44 for r in range(0, len(cust), step)],
                       [f"{r + 1}: {cust[r]}" for r in range(0, len(cust), step)], fontsize=6)
         for side in ax.spines.values():
             side.set_visible(False)
         self.legend(ax, loc="upper left", bbox_to_anchor=(1.01, 1))
-        ax.set_title(f"Lịch thăm y(i,k,t): {self.title}", fontsize=10)
+        ax.set_title(f"Visit schedule y(i,k,t): {self.title}", fontsize=10)
         self.save(fig, "schedule")
 
     def save(self, fig, name):
         fig.tight_layout()
         path = self.outdir / f"{name}.png"
-        fig.savefig(path, dpi=170)
+        fig.savefig(path, dpi=170, bbox_inches="tight", pad_inches=0.1)
         plt.close(fig)
         print("Saved:", path.relative_to(ROOT))
 
     def figure_grid(self):
-        """Lưới cán bộ x ngày: mỗi ô một tuyến, khách đánh số theo thứ tự thăm."""
+        """Officer x day panels, customers numbered in visiting order."""
         fig, axes = plt.subplots(self.K, self.H, figsize=(4.6 * self.H, 4.6 * self.K + 0.8),
                                  squeeze=False)
         routes = {(k, t): stops for k, t, stops in self.routes()}
@@ -324,15 +324,15 @@ class Plotter:
                            color="#cbd5e0", zorder=2)
                 stops = routes.get((k, t))
                 if stops is None:
-                    ax.set_title(f"CB{k} – ngày {t}: nghỉ", fontsize=10)
+                    ax.set_title(f"Officer {k} – day {t}: no route", fontsize=10)
                 else:
                     self.draw_route(ax, k, t, stops, lw=2.2, size=120, numbered=True)
-                    ax.set_title(f"CB{k} – ngày {t}: {len(stops) - 2} khách, "
+                    ax.set_title(f"Officer {k} – day {t}: {len(stops) - 2} customers, "
                                  f"{stops.leg_km.sum():.1f} km", fontsize=10,
                                  color=shade(k, 1, self.H))
                 draw_depot(ax, self.points)
-        fig.suptitle(f"{self.title}\nmỗi ô là tuyến của một cán bộ trong một ngày: "
-                     f"xuất phát từ chi nhánh ★, thăm khách theo số 1, 2, 3, … rồi về ★",
+        fig.suptitle(f"{self.title}\neach panel is one officer's route on one day: "
+                     f"start at the branch ★, visit customers in the order 1, 2, 3, …, return to ★",
                      fontsize=13)
         self.save(fig, "routes_grid")
 

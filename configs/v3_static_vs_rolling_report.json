@@ -3,10 +3,10 @@
   "seed": 2026,
   "monte_carlo_range": [1, 20],
   "p_scenarios": ["THAP", "CO_SO", "CAO"],
-  "methods": ["ALNS"],
+  "methods": ["best", "fastest"],
   "include_myopic": true,
   "ga": {"population_size": 80, "generations": 300, "stagnation_generations": 50},
-  "tabu": {"iterations": 300, "neighborhood_size": 40, "tabu_tenure": 15},
+  "tabu": {"iterations": 300, "neighborhood_size": 40, "tabu_tenure": 15, "stagnation_iterations": 50},
   "alns": {"iterations": 300, "stagnation_iterations": 50},
   "branch_and_cut": {"time_limit_seconds": 120, "mip_gap": 0.0001,
                      "minimize_distance": true, "distance_time_limit_seconds": 60}

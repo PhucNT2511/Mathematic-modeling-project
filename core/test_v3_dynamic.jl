@@ -27,14 +27,14 @@ end
 @assert length(dynamic_aggregate(summaries, [1])) == 4
 println("Dynamic rolling-horizon smoke test passed")
 
-# Even a near-immediate solver stop must not discard a feasible warm start.
+# A solver stopped almost at once must still return the warm start.
 initial = solve_alns(data; iterations=4, seed=2026)
 limited = solve_branch_and_cut(data; time_limit=0.0, initial_result=initial)
 @assert limited.objective + 1.0e-5 >= initial.objective
 @assert !isempty(selected_routes(data, limited))
 println("Branch-and-Cut warm-start smoke test passed")
 
-# Check that the actual v3 probability and common-random-number tables align.
+# Probability and Monte Carlo tables cover the same customers and days.
 root = normpath(joinpath(@__DIR__, "..", "collection_routing_dataset_v3"))
 v3, customer_ids = load_v3_data(root, "INS_XS"; scenario="CO_SO")
 sample = load_v3_draws(root, customer_ids, v3.H, [1])

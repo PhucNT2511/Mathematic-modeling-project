@@ -1,8 +1,8 @@
 include(joinpath(@__DIR__, "run_v3_comparison.jl"))
 include(joinpath(@__DIR__, "..", "data_processing", "dynamic_v3_data.jl"))
 
-# Solve afresh every morning. Each method owns its own paid/attempt state,
-# while all methods see the same exogenous customer-day random draws.
+# Re-solve every morning from the observed state (who paid, visits made) and
+# execute only that day. `draws` are the scenario's common random numbers.
 function run_dynamic_method(label, data, customer_ids, draws, scenario_id, config, seed;
                             policy=nothing, on_transition=nothing, verbose=true,
                             lookahead::Union{Nothing,Int}=nothing)
@@ -36,7 +36,9 @@ function run_dynamic_method(label, data, customer_ids, draws, scenario_id, confi
             c = config["tabu"]
             solve_tabu_search(residual; iterations=Int(c["iterations"]),
                 neighborhood_size=Int(c["neighborhood_size"]),
-                tabu_tenure=Int(c["tabu_tenure"]), seed=seed + day - 1)
+                tabu_tenure=Int(c["tabu_tenure"]),
+                stagnation_iterations=Int(get(c, "stagnation_iterations", 0)),
+                seed=seed + day - 1)
         elseif solver_label == "ALNS"
             c = config["alns"]
             solve_alns(residual; iterations=Int(c["iterations"]),
@@ -44,7 +46,8 @@ function run_dynamic_method(label, data, customer_ids, draws, scenario_id, confi
         elseif solver_label == "Branch-and-Cut"
             c = config["branch_and_cut"]
             warm_start = solve_alns(residual; iterations=Int(config["alns"]["iterations"]),
-                                    seed=seed + day - 1)
+                stagnation_iterations=Int(get(config["alns"], "stagnation_iterations", 0)),
+                seed=seed + day - 1)
             solve_branch_and_cut(residual; time_limit=Float64(c["time_limit_seconds"]),
                 mip_gap=Float64(c["mip_gap"]), initial_result=warm_start,
                 minimize_distance=Bool(get(c, "minimize_distance", false)),
@@ -58,8 +61,7 @@ function run_dynamic_method(label, data, customer_ids, draws, scenario_id, confi
         seconds = time() - started
         runtime += seconds
 
-        # Only today's routes are executed. Future routes are discarded and
-        # replaced by a new optimization after observing today's outcomes.
+        # Execute day 1 of the residual plan; later days are re-planned tomorrow.
         day_collected = 0.0
         day_distance = 0.0
         day_visits = 0

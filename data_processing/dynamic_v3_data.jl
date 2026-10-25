@@ -30,8 +30,8 @@ end
 
 """Make the residual routing problem after prior days' payments and visits.
 
-`lookahead` giới hạn số ngày được nhìn trước: `nothing` lấy mọi ngày còn lại
-(cuốn chiếu), `1` chỉ tối ưu ngày hôm nay (tham lam).
+`lookahead = nothing` keeps all remaining days (rolling horizon); `1` keeps only
+the current day (myopic).
 """
 function remaining_v3_data(data::DebtRoutingData, paid, attempts, day;
                            lookahead::Union{Nothing,Int}=nothing)

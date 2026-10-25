@@ -1,17 +1,14 @@
-# Adaptive Large Neighborhood Search dùng chung biểu diễn và hàm đánh giá
-# với GA để kết quả giữa các heuristic có thể so sánh trực tiếp.
+# Adaptive Large Neighborhood Search on the gene matrix of genetic_algorithm.jl.
 if !isdefined(Main, :solve_genetic_algorithm)
     include(joinpath(@__DIR__, "genetic_algorithm.jl"))
 end
 
 using Random
 
-# Danh sách mọi lần thăm đang có dưới dạng (khách hàng, ngày).
 selected_visits(genes) = [
     (i, t) for i in axes(genes, 1) for t in axes(genes, 2) if genes[i, t] > 0
 ]
 
-# Kiểm tra việc chèn khách hàng i vào cán bộ k, ngày t có khả thi không.
 function feasible_insertion(genes, i, t, k, data)
     genes[i, t] == 0 || return false
     count(genes[i, :] .> 0) < data.max_visits[i] || return false
@@ -23,7 +20,7 @@ function feasible_insertion(genes, i, t, k, data)
     return used_time <= data.daily_budget[k, t] + 1.0e-9
 end
 
-# Giá trị tăng thêm và quãng đường tăng thêm của một phép chèn.
+# Gain in expected value and increase in distance of inserting (i, t, k).
 function insertion_metrics(genes, i, t, k, data)
     old_days = findall(genes[i, :] .> 0)
     new_days = sort(vcat(old_days, t))
@@ -37,7 +34,8 @@ function insertion_metrics(genes, i, t, k, data)
     return gain, distance_increase
 end
 
-# Destroy 1: xóa q lần thăm ngẫu nhiên.
+# Destroy operators: each removes up to q visits.
+
 function random_removal!(genes, q, data, rng)
     visits = selected_visits(genes)
     shuffle!(rng, visits)
@@ -46,7 +44,7 @@ function random_removal!(genes, q, data, rng)
     end
 end
 
-# Destroy 2: xóa những lần thăm có đóng góp kỳ vọng biên thấp nhất.
+# Visits with the smallest marginal expected value.
 function worst_value_removal!(genes, q, data, rng)
     visits = selected_visits(genes)
     scored = Tuple{Float64,Int,Int}[]
@@ -63,8 +61,7 @@ function worst_value_removal!(genes, q, data, rng)
     end
 end
 
-# Destroy 3: chọn một khách hàng rồi xóa các lần thăm của những khách hàng
-# gần nó nhất. Toán tử này phá một vùng địa lý thay vì các điểm rời rạc.
+# A random visited customer and the visits closest to it.
 function related_removal!(genes, q, data, rng)
     visits = selected_visits(genes)
     isempty(visits) && return
@@ -78,7 +75,7 @@ function related_removal!(genes, q, data, rng)
     end
 end
 
-# Destroy 4: xóa toàn bộ một tuyến cán bộ-ngày được chọn ngẫu nhiên.
+# Visits of one random officer-day route.
 function route_removal!(genes, q, data, rng)
     nonempty_routes = [
         (k, t) for k in 1:data.K for t in 1:data.H
@@ -93,8 +90,9 @@ function route_removal!(genes, q, data, rng)
     end
 end
 
-# Repair 1: liên tục chọn phép chèn có giá trị kỳ vọng tăng lớn nhất;
-# khi bằng nhau, ưu tiên phép chèn làm tăng ít khoảng cách hơn.
+# Repair operators: insert feasible (customer, day, officer) triples until none is left.
+
+# Largest gain in expected value; ties go to the smallest distance increase.
 function greedy_repair!(genes, data)
     while true
         best_move = nothing
@@ -116,8 +114,7 @@ function greedy_repair!(genes, data)
     return genes
 end
 
-# Repair 2: regret-2 ưu tiên khách hàng sẽ bị thiệt nhiều nhất nếu bỏ lỡ
-# vị trí chèn tốt nhất và phải dùng vị trí tốt thứ hai.
+# Regret-2: the customer whose best insertion beats its second best by the most.
 function regret_repair!(genes, data)
     while true
         chosen_move = nothing
@@ -151,7 +148,6 @@ function regret_repair!(genes, data)
     return genes
 end
 
-# Chọn toán tử theo roulette wheel dựa trên trọng số thích nghi.
 function roulette_choice(weights, rng)
     threshold = rand(rng) * sum(weights)
     cumulative = 0.0
@@ -162,20 +158,21 @@ function roulette_choice(weights, rng)
     return lastindex(weights)
 end
 
-# Điểm chuẩn hóa chỉ dùng cho xác suất chấp nhận; nghiệm tốt nhất vẫn được
-# so sánh từ điển bằng expected recovery rồi mới đến distance.
+# Scalar score for simulated annealing only; the best solution is still chosen
+# lexicographically by is_better.
 function acceptance_score(evaluation, data)
     return evaluation.expected_recovery / sum(data.debt) -
            1.0e-4 * evaluation.total_distance
 end
 
 """
-Giải gần đúng bằng ALNS.
+    solve_alns(data; kwargs...)
 
-destroy_fraction quy định tỷ lệ lần thăm bị xóa mỗi vòng.
-segment_length quy định chu kỳ cập nhật trọng số toán tử.
-reaction_factor điều khiển tốc độ ALNS học trọng số mới.
-cooling_rate điều khiển giảm nhiệt của cơ chế simulated annealing.
+Each iteration removes `destroy_fraction` of the visits with one destroy operator
+and reinserts with one repair operator, both picked by roulette wheel. Operator
+weights are updated every `segment_length` iterations with `reaction_factor`;
+acceptance is simulated annealing with geometric `cooling_rate`.
+`stagnation_iterations` > 0 stops after that many iterations without a new best.
 """
 function solve_alns(
     data::DebtRoutingData;
@@ -193,7 +190,6 @@ function solve_alns(
     stagnant = 0
     started = time()
 
-    # Greedy repair từ nghiệm rỗng tạo nghiệm xuất phát khả thi.
     current_genes = greedy_repair!(zeros(Int, data.n, data.H), data)
     current_evaluation = evaluate_ga(current_genes, data)
     best_genes = copy(current_genes)
@@ -213,8 +209,7 @@ function solve_alns(
     destroy_uses = zeros(Int, length(destroy_operators))
     repair_uses = zeros(Int, length(repair_operators))
 
-    # Nhiệt độ ban đầu trên thang điểm chuẩn hóa.
-    temperature = 0.05
+    temperature = 0.05   # on the scale of acceptance_score
 
     for iteration in 1:iterations
         destroy_index = roulette_choice(destroy_weights, rng)
@@ -256,7 +251,6 @@ function solve_alns(
         repair_scores[repair_index] += reward
         temperature *= cooling_rate
 
-        # Cuối mỗi segment, cập nhật trọng số theo điểm trung bình đạt được.
         if iteration % segment_length == 0
             for i in eachindex(destroy_weights)
                 performance = destroy_uses[i] == 0 ? 0.0 :
@@ -277,7 +271,6 @@ function solve_alns(
             fill!(destroy_uses, 0)
             fill!(repair_uses, 0)
         end
-        # Dừng sớm như GA: nhiều vòng liên tiếp không có nghiệm tốt nhất mới (0 = tắt).
         stagnation_iterations > 0 && stagnant >= stagnation_iterations && break
     end
 
@@ -291,4 +284,3 @@ function solve_alns(
         ga_decisions(best_genes, best_evaluation.routes, data),
     )
 end
-

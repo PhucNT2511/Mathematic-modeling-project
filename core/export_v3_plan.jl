@@ -1,6 +1,6 @@
-# Giải một instance và xuất kế hoạch nhiều ngày để vẽ hình (core/plot_v3_plan.py).
-# Cách dùng: julia --project=. core/export_v3_plan.jl [instance] [số khách] [số ngày] [BnC|ALNS]
-# Số khách = 0 nghĩa là giữ toàn bộ instance. Instance lớn nên dùng ALNS.
+# Solve one instance and write the plan for core/plot_v3_plan.py.
+# Usage: julia --project=. core/export_v3_plan.jl [instance] [customers] [days] [BnC|ALNS]
+# customers = 0 keeps the whole instance; use ALNS for large instances.
 include(joinpath(@__DIR__, "run_v3_experiments.jl"))
 
 function export_v3_plan(instance::String, n::Int, H::Int, method::String="BnC")

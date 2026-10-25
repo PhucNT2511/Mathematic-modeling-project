@@ -1,9 +1,9 @@
-"""Vẽ biểu đồ kết quả thí nghiệm số từ outputs/ vào figures/experiments/.
+"""Charts of the experiment results, written to figures/experiments/.
 
-Cách dùng: python core/plot_results.py
+Usage: python core/plot_results.py
 
-Đọc outputs/experiments/v3_experiments_gd{1,2}/summary.csv (10 lần chạy) và,
-nếu có, outputs/v3_INS_S/static_vs_rolling/paired_summary.csv.
+Reads outputs/experiments/v3_experiments_gd{1,2}/summary.csv and, if present,
+outputs/v3_INS_S/static_vs_rolling/paired_summary.csv.
 """
 import sys
 sys.stdout.reconfigure(encoding="utf-8")
@@ -24,8 +24,8 @@ METHOD_COLORS = {
     "Branch-and-Cut": "#1a202c",
     "BnC + ALNS start": "#d69e2e",
 }
-PHASES = [("v3_experiments_gd1", "GD1: một ngày (H = 1)"),
-          ("v3_experiments_gd2", "GD2: năm ngày (H = 5)")]
+PHASES = [("v3_experiments_gd1", "Phase 1: one day (H = 1)"),
+          ("v3_experiments_gd2", "Phase 2: five days (H = 5)")]
 plt.rcParams.update({"axes.grid": True, "grid.alpha": 0.3, "axes.spines.top": False,
                      "axes.spines.right": False})
 
@@ -41,14 +41,14 @@ def time_limit(phase):
 
 
 def main_series(df):
-    """Chuỗi tăng dần số khách trên bộ MAIN: INS_XS n=10,20,30 rồi INS_S n=50,80."""
+    """MAIN set by size: INS_XS n=10,20,30, then INS_S n=50,80."""
     return df[df.instance.isin(["INS_XS", "INS_S"])].sort_values("n")
 
 
 def save(fig, name):
     FIG.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
-    fig.savefig(FIG / f"{name}.png", dpi=170)
+    fig.savefig(FIG / f"{name}.png", dpi=170, bbox_inches="tight", pad_inches=0.1)
     plt.close(fig)
     print("Saved:", (FIG / f"{name}.png").relative_to(ROOT))
 
@@ -67,14 +67,14 @@ def line_panels(metric, ylabel, name, log=True, limit_line=False, symlog=False):
             ax.plot(part.n, part[metric], "o-", color=color, lw=2, ms=6, label=method)
         if limit_line:
             ax.axhline(time_limit(phase), color="#718096", ls="--", lw=1)
-            ax.text(10, time_limit(phase) * 1.08, f"giới hạn {time_limit(phase)} s",
+            ax.text(10, time_limit(phase) * 1.08, f"limit {time_limit(phase)} s",
                     fontsize=8, color="#4a5568")
         if symlog:
             ax.set_yscale("symlog", linthresh=0.1)
         elif log:
             ax.set_yscale("log")
         ax.set_xticks(sorted(df.n.unique()))
-        ax.set_xlabel("số khách n (bộ MAIN, K = 2)")
+        ax.set_xlabel("customers n (MAIN set, K = 2)")
         ax.set_title(title)
     axes[0].set_ylabel(ylabel)
     axes[1].legend(fontsize=8)
@@ -99,10 +99,10 @@ def objective_n80():
                    color=METHOD_COLORS[method], label=method)
         bound = [df[df.instance == i].mean_upper_bound.min() for i in instances]
         ax.scatter(x, bound, marker="_", s=900, color="#e53e3e", lw=2, zorder=5,
-                   label="cận trên BnC")
+                   label="BnC upper bound")
         ax.set_xticks(x, instances)
-        ax.set_ylabel("giá trị thu hồi kỳ vọng (triệu đồng)")
-        ax.set_title(f"{title}: các instance 80 khách")
+        ax.set_ylabel("expected collection (million VND)")
+        ax.set_title(f"{title}: 80-customer instances")
     axes[1].legend(fontsize=8, loc="lower right")
     save(fig, "objective_n80")
 
@@ -115,13 +115,13 @@ def model_size():
             continue
         df = pd.read_csv(path)
         df = df[df.source_instance.isin(["INS_XS", "INS_S"])].sort_values("customers")
-        ax.plot(df.customers, df.num_vars, style, color="#2b6cb0", label=f"biến – {title}")
+        ax.plot(df.customers, df.num_vars, style, color="#2b6cb0", label=f"variables – {title}")
         ax.plot(df.customers, df.num_constraints, style, color="#c53030",
-                label=f"ràng buộc – {title}")
+                label=f"constraints – {title}")
     ax.set_yscale("log")
-    ax.set_xlabel("số khách n")
-    ax.set_ylabel("kích thước MILP")
-    ax.set_title("Kích thước mô hình theo số khách")
+    ax.set_xlabel("customers n")
+    ax.set_ylabel("MILP size")
+    ax.set_title("Model size vs number of customers")
     ax.legend(fontsize=8)
     save(fig, "model_size")
 
@@ -131,16 +131,17 @@ def static_vs_rolling():
                   ROOT / "results" / "v3_INS_S" / "static_vs_rolling" / "paired_summary.csv"]
     path = next((p for p in candidates if p.exists()), None)
     if path is None:
-        print("Chưa có paired_summary.csv của INS_S, bỏ qua hình so sánh chính sách")
+        print("No paired_summary.csv for INS_S, skipping the policy figure")
         return
     df = pd.read_csv(path)
-    df = df[df.metric == "collected_million_vnd"]
+    # ALNS only; other routing methods are in the CSV files.
+    df = df[(df.metric == "collected_million_vnd") & (df.method == "ALNS")]
     scenarios = [s for s in ["THAP", "CO_SO", "CAO"] if s in set(df.p_scenario)]
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
     x = np.arange(len(scenarios))
     static = [df[df.p_scenario == s].mean_static.iloc[0] for s in scenarios]
-    bars = [("Tĩnh", static, "#718096")]
-    labels = {"rolling": ("Cuốn chiếu", "#2b6cb0"), "myopic": ("Tham lam", "#c53030")}
+    bars = [("Static", static, "#718096")]
+    labels = {"rolling": ("Rolling horizon", "#2b6cb0"), "myopic": ("Myopic", "#c53030")}
     for policy, (label, color) in labels.items():
         part = df[df.policy == policy]
         if not part.empty:
@@ -150,8 +151,8 @@ def static_vs_rolling():
     for j, (label, vals, color) in enumerate(bars):
         axes[0].bar(x + (j - (len(bars) - 1) / 2) * width, vals, width, color=color, label=label)
     axes[0].set_xticks(x, scenarios)
-    axes[0].set_ylabel("tiền thu thực tế trung bình (triệu đồng)")
-    axes[0].set_title(f"INS_S: trung bình trên {int(df.n_mc.iloc[0])} kịch bản Monte Carlo")
+    axes[0].set_ylabel("mean simulated collection (million VND)")
+    axes[0].set_title(f"INS_S: mean over {int(df.n_mc.iloc[0])} Monte Carlo scenarios")
     axes[0].legend(fontsize=8)
     for j, (policy, (label, color)) in enumerate(labels.items()):
         part = df[df.policy == policy]
@@ -165,17 +166,17 @@ def static_vs_rolling():
                          fmt="o", color=color, capsize=5, lw=2, label=label)
     axes[1].axhline(0, color="#1a202c", lw=1)
     axes[1].set_xticks(x, scenarios)
-    axes[1].set_ylabel("chênh lệch so với tĩnh (triệu đồng)")
-    axes[1].set_title("Chênh lệch ghép cặp và khoảng tin cậy 95%")
+    axes[1].set_ylabel("difference vs static (million VND)")
+    axes[1].set_title("Paired difference and 95% confidence interval")
     axes[1].legend(fontsize=8)
     save(fig, "static_vs_rolling")
 
 
 if __name__ == "__main__":
-    line_panels("mean_cpu_seconds", "CPU trung bình (s, thang log)", "cpu_time",
+    line_panels("mean_cpu_seconds", "mean CPU time (s, log scale)", "cpu_time",
                 limit_line=True)
-    line_panels("mean_gap_percent", "gap trung bình (%, thang symlog)", "gap", symlog=True)
-    line_panels("mean_bb_nodes", "số node B&B trung bình", "bb_nodes", log=False)
+    line_panels("mean_gap_percent", "mean gap (%, symlog scale)", "gap", symlog=True)
+    line_panels("mean_bb_nodes", "mean B&B nodes", "bb_nodes", log=False)
     objective_n80()
     model_size()
     static_vs_rolling()

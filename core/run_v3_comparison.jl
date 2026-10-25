@@ -5,8 +5,8 @@ include(joinpath(@__DIR__, "alns.jl"))
 include(joinpath(@__DIR__, "..", "data_processing", "load_v3_data.jl"))
 using JSON
 
-# Convert solver decisions back to visit days to check every method against
-# the same expected-value formula, independently of the reported objective.
+# Rebuild routes and visit days from the decisions, check feasibility, and recompute
+# the expected value independently of the objective the method reported.
 function checked_plan(data, result)
     !isfinite(result.objective) && return nothing
     visits = zeros(Int, data.n, data.H)
@@ -108,8 +108,7 @@ function run_v3_comparison(config_path)
         push!(records, (result=result, plan=plan, total_seconds=total_seconds))
     end
 
-    # Only a finite MILP bound can certify an optimality gap. The solver may
-    # time out without an integer solution; that case remains visible in CSV.
+    # Gap only with a finite bound; a timeout without a solution stays blank.
     exact = records[end].result
     bound = isfinite(exact.bound) ? exact.bound : NaN
     outdir = normpath(joinpath(@__DIR__, "..", "outputs", "v3_$(instance)"))
@@ -128,7 +127,7 @@ function run_v3_comparison(config_path)
             println(
                 io,
                 "$(result.method),$(result.status),$objective,$upper,$gap," *
-                "$(result.elapsed),$(record.total_seconds),$visits,$distance",
+                "$(result.elapsed + result.distance_seconds),$(record.total_seconds),$visits,$distance",
             )
         end
     end

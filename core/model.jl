@@ -3,9 +3,8 @@ using HiGHS
 import MathOptInterface as MOI
 using Printf
 
-# Cấu trúc lưu toàn bộ dữ liệu đầu vào của một instance.
-# Ma trận khoảng cách và thời gian có kích thước (n+1)x(n+1);
-# hàng/cột 1 trong Julia tương ứng với chi nhánh có chỉ số toán học 0.
+# Input data of one instance. distance and travel_time are (n+1)x(n+1);
+# Julia row/column 1 is the branch (node 0 in the model).
 struct DebtRoutingData
     n::Int
     K::Int
@@ -19,8 +18,7 @@ struct DebtRoutingData
     max_visits::Vector{Int}
 end
 
-# Liệt kê mọi tập ngày không rỗng có nhiều nhất R lần thăm.
-# Mỗi bit của mask biểu diễn việc một ngày có thuộc lịch hay không.
+# All non-empty sets of days with at most R visits; bit t-1 of mask marks day t.
 function visit_schedules(H::Int, R::Int)
     schedules = Vector{Vector{Int}}()
     for mask in 1:(2^H - 1)
@@ -30,8 +28,7 @@ function visit_schedules(H::Int, R::Int)
     return schedules
 end
 
-# Giá trị thu hồi kỳ vọng nếu khách hàng i được thăm theo schedule.
-# Biểu thức được tính trước nên hệ số mục tiêu vẫn là tuyến tính.
+# v(i,S): expected collection when customer i is visited on the days in schedule.
 expected_value(data, i, schedule) =
     data.debt[i] * (1.0 - prod((1.0 - data.probability[i, t] for t in schedule); init=1.0))
 
@@ -46,9 +43,8 @@ function logical_variable(model, name, integer_variables)
     return variable
 end
 
-# Dựng một mô hình dùng chung cho cả hai phương pháp:
-# - integer_variables=true: dựng MILP cho Branch-and-Cut;
-# - integer_variables=false: dựng LP relaxation cho Branch-and-Bound tự viết.
+# Builds model (1)-(12), plus (15) when symmetry_breaking is set.
+# integer_variables=false gives the LP relaxation.
 function build_model(
     data::DebtRoutingData;
     integer_variables::Bool,
@@ -67,8 +63,7 @@ function build_model(
     N, V = 1:n, 0:n
     schedules = Dict(i => visit_schedules(H, data.max_visits[i]) for i in N)
 
-    # x: cung di chuyển; y: phân công; z: sử dụng cán bộ;
-    # lambda: chọn lịch thăm; u: thứ tự MTZ.
+    # x: arcs, y: visits, z: active officer-days, lambda: schedules, u: MTZ positions.
     x = Dict{NTuple{4,Int},VariableRef}()
     y = Dict{NTuple{3,Int},VariableRef}()
     z = Dict{NTuple{2,Int},VariableRef}()
@@ -76,14 +71,12 @@ function build_model(
     u = Dict{NTuple{3,Int},VariableRef}()
     logical = Dict{Tuple,VariableRef}()
 
-    # Khai báo biến cung x(i,j,k,t).
     for i in V, j in V, k in 1:K, t in 1:H
         i == j && continue
         v = logical_variable(model, "x_$(i)_$(j)_$(k)_$(t)", integer_variables)
         x[(i, j, k, t)] = v
         logical[(:x, i, j, k, t)] = v
     end
-    # Khai báo biến thăm y(i,k,t) và biến thứ tự u(i,k,t).
     for i in N, k in 1:K, t in 1:H
         v = logical_variable(model, "y_$(i)_$(k)_$(t)", integer_variables)
         y[(i, k, t)] = v
@@ -94,20 +87,18 @@ function build_model(
             base_name="u_$(i)_$(k)_$(t)",
         )
     end
-    # Khai báo z(k,t): cán bộ k có ra ngoài làm việc trong ngày t.
     for k in 1:K, t in 1:H
         v = logical_variable(model, "z_$(k)_$(t)", integer_variables)
         z[(k, t)] = v
         logical[(:z, k, t)] = v
     end
-    # Khai báo lambda(i,s): khách hàng i chọn lịch s.
     for i in N, s in eachindex(schedules[i])
         v = logical_variable(model, "lambda_$(i)_$(s)", integer_variables)
         lambda[(i, s)] = v
         logical[(:lambda, i, s)] = v
     end
 
-    # (1) Tối đa hóa tổng giá trị khoản nợ thu hồi kỳ vọng.
+    # (1)
     @objective(
         model,
         Max,
@@ -117,11 +108,11 @@ function build_model(
         ),
     )
 
-    # (2) Mỗi khách hàng được chọn nhiều nhất một lịch thăm.
+    # (2) at most one schedule per customer
     for i in N
         @constraint(model, sum(lambda[(i, s)] for s in eachindex(schedules[i])) <= 1)
     end
-    # (3) Nếu lịch chứa ngày t thì đúng một cán bộ phải thăm khách hàng.
+    # (3) one officer visits on each day of the chosen schedule, none otherwise
     for i in N, t in 1:H
         @constraint(
             model,
@@ -132,17 +123,17 @@ function build_model(
             ),
         )
     end
-    # (4)-(5) Tuyến được sử dụng phải xuất phát và kết thúc ở chi nhánh.
+    # (4)-(5) an active route leaves and re-enters the branch once
     for k in 1:K, t in 1:H
         @constraint(model, sum(x[(0, j, k, t)] for j in N) == z[(k, t)])
         @constraint(model, sum(x[(i, 0, k, t)] for i in N) == z[(k, t)])
     end
-    # (6)-(7) Mỗi khách hàng được thăm có đúng một cung vào và một cung ra.
+    # (6)-(7) flow conservation
     for i in N, k in 1:K, t in 1:H
         @constraint(model, sum(x[(i, j, k, t)] for j in V if j != i) == y[(i, k, t)])
         @constraint(model, sum(x[(j, i, k, t)] for j in V if j != i) == y[(i, k, t)])
     end
-    # (8) Tổng thời gian di chuyển và phục vụ không vượt ngân sách ngày.
+    # (8) travel + service time within the daily budget
     for k in 1:K, t in 1:H
         @constraint(
             model,
@@ -154,8 +145,7 @@ function build_model(
             <= data.daily_budget[k, t] * z[(k, t)],
         )
     end
-    # (9)-(10) MTZ loại chu trình con không đi qua chi nhánh.
-    # Biến u bằng 0 khi khách hàng không được chọn.
+    # (9)-(10) MTZ subtour elimination; u = 0 for unvisited customers
     for i in N, k in 1:K, t in 1:H
         @constraint(model, y[(i, k, t)] <= u[(i, k, t)])
         @constraint(model, u[(i, k, t)] <= n * y[(i, k, t)])
@@ -168,9 +158,7 @@ function build_model(
             <= n - 1 + n * (1 - y[(j, k, t)]),
         )
     end
-    # (15) Phá đối xứng: nếu các cán bộ có cùng ngân sách ngày t thì hoán đổi
-    # nhãn cán bộ cho ra cùng một nghiệm. Buộc dùng cán bộ theo thứ tự 1, 2, ...
-    # chỉ loại các nghiệm trùng lặp, không làm mất nghiệm tối ưu.
+    # (15) officers with equal budgets are interchangeable; use them in label order
     if symmetry_breaking
         for t in 1:H, k in 1:K-1
             data.daily_budget[k, t] == data.daily_budget[k + 1, t] || continue
@@ -192,9 +180,13 @@ struct SolveResult
     nodes::Int
     elapsed::Float64
     decisions::Dict{Tuple,Int}
+    distance_seconds::Float64   # second (distance) solve of Branch-and-Cut, 0 if not run
 end
 
-# Khôi phục thứ tự các tuyến từ các biến cung x có giá trị bằng 1.
+SolveResult(method, status, objective, bound, nodes, elapsed, decisions) =
+    SolveResult(method, status, objective, bound, nodes, elapsed, decisions, 0.0)
+
+# Follows the x arcs from the branch to recover each officer-day route.
 function selected_routes(data::DebtRoutingData, result::SolveResult)
     routes = Dict{Tuple{Int,Int},Vector{Int}}()
     for k in 1:data.K, t in 1:data.H
@@ -223,7 +215,6 @@ function selected_routes(data::DebtRoutingData, result::SolveResult)
     return routes
 end
 
-# In thống kê thuật toán và tuyến của từng cán bộ trong từng ngày.
 function print_result(data::DebtRoutingData, result::SolveResult)
     println("\n", result.method)
     println("  Status:    ", result.status)

@@ -1,32 +1,9 @@
-# Nạp dữ liệu và hàm dựng mô hình nếu file này được chạy độc lập.
 if !isdefined(Main, :DebtRoutingData)
     include(joinpath(@__DIR__, "model.jl"))
 end
 
-"""
-Giải MILP bằng Branch-and-Cut của HiGHS.
-
-Khác với file branch_and_bound.jl, toàn bộ biến logic được khai báo nhị phân.
-HiGHS tự thực hiện presolve, tìm nghiệm ban đầu, thêm cutting planes, phân
-nhánh và tính cận. Đây là phương pháp nên dùng cho dữ liệu thực tế.
-
-Đầu vào:
-- data: dữ liệu bài toán.
-- time_limit: thời gian chạy tối đa, tính bằng giây.
-- mip_gap: độ lệch tối ưu tương đối chấp nhận được.
-- initial_result: nghiệm heuristic khả thi để làm MIP start và dự phòng.
-- minimize_distance: nếu true, giải lần hai theo thứ tự từ điển như đề xuất:
-  giữ giá trị thu hồi kỳ vọng ≥ Z* − value_tolerance·max(1, |Z*|) rồi tối
-  thiểu tổng quãng đường. Lần hai dùng nghiệm lần một làm MIP start và giới
-  hạn thời gian distance_time_limit.
-- symmetry_breaking: thêm ràng buộc (15) z[k,t] ≥ z[k+1,t] cho cán bộ cùng ngân sách.
-- random_seed: seed của HiGHS, dùng khi lặp nhiều lần chạy trên cùng instance.
-
-Số nút cây Branch-and-Bound (`nodes`) lấy từ HiGHS sau lần giải chính (tối đa
-tiền thu kỳ vọng); lần giải phụ cực tiểu quãng đường không được cộng vào.
-
-Đầu ra là một SolveResult chứa nghiệm tốt nhất và cận do solver cung cấp.
-"""
+# MIP start from a heuristic solution: x, y, z as given, the lambda of the matching
+# day set, and MTZ positions in route order.
 function set_routing_start!(vars, data::DebtRoutingData, initial_result::SolveResult)
     for (key, variable) in vars.logical
         if key[1] != :lambda
@@ -53,6 +30,23 @@ function set_routing_start!(vars, data::DebtRoutingData, initial_result::SolveRe
     end
 end
 
+"""
+    solve_branch_and_cut(data; kwargs...)
+
+Solve the MILP with the HiGHS branch-and-cut solver.
+
+- `initial_result`: feasible heuristic solution used as MIP start. If HiGHS ends
+  without anything at least as good, that solution is returned and the status
+  gets the suffix `_HEURISTIC_FALLBACK`.
+- `minimize_distance`: second, lexicographic solve that keeps
+  Z >= Z* - value_tolerance * max(1, |Z*|) and minimises total distance, starting
+  from the first solution, with its own `distance_time_limit`. With
+  `distance_only_if_optimal` it runs only when the first solve is OPTIMAL.
+- `symmetry_breaking`: add (15), z[k,t] >= z[k+1,t] for officers with equal budgets.
+
+`elapsed` and `nodes` refer to the first solve; the second solve's time is in
+`distance_seconds`.
+"""
 function solve_branch_and_cut(
     data::DebtRoutingData;
     time_limit::Float64=300.0,
@@ -63,8 +57,8 @@ function solve_branch_and_cut(
     value_tolerance::Float64=1.0e-6,
     symmetry_breaking::Bool=false,
     random_seed::Union{Nothing,Int}=nothing,
+    distance_only_if_optimal::Bool=false,
 )
-    # Dựng mô hình với các biến x, y, z và lambda là biến nhị phân.
     model, vars = build_model(
         data;
         integer_variables=true,
@@ -78,7 +72,6 @@ function solve_branch_and_cut(
         set_routing_start!(vars, data, initial_result)
     end
 
-    # Solver thực hiện toàn bộ quy trình Branch-and-Cut.
     started = time()
     optimize!(model)
     elapsed = time() - started
@@ -89,8 +82,8 @@ function solve_branch_and_cut(
         0
     end
 
-    # A zero-route incumbent is feasible but useless when a better heuristic
-    # route is known. Keep its provenance explicit in the returned status.
+    # HiGHS may stop on an incumbent worse than the start (often the empty plan);
+    # return the start and say so in the status.
     if initial_result !== nothing &&
        (!has_values(model) || objective_value(model) + 1.0e-5 < initial_result.objective)
         return SolveResult(
@@ -104,7 +97,6 @@ function solve_branch_and_cut(
         )
     end
 
-    # Solver có thể dừng mà chưa tìm được nghiệm nguyên khả thi.
     if !has_values(model)
         return SolveResult(
             "HiGHS Branch-and-Cut",
@@ -121,10 +113,11 @@ function solve_branch_and_cut(
     stage1_bound = objective_bound(model)
     method = "HiGHS Branch-and-Cut"
 
-    # Giải lần hai (thứ tự từ điển): giữ giá trị kỳ vọng tối ưu, giảm quãng đường.
-    if minimize_distance
+    # Keeping Z >= Z* only makes the second solve lexicographic if Z* is optimal,
+    # hence distance_only_if_optimal.
+    if minimize_distance && (!distance_only_if_optimal || status == "OPTIMAL")
         expected_expr = objective_function(model)
-        # Đọc hết nghiệm lần một trước khi sửa mô hình (JuMP xóa nghiệm khi mô hình đổi).
+        # JuMP drops the solution once the model is modified, so copy it first.
         stage1_values = Dict(variable => value(variable) for variable in all_variables(model))
         for (variable, v) in stage1_values
             set_start_value(variable, v)
@@ -138,7 +131,7 @@ function solve_branch_and_cut(
         set_attribute(model, "time_limit", distance_time_limit)
         started2 = time()
         optimize!(model)
-        elapsed += time() - started2
+        distance_seconds = time() - started2
         status2 = string(termination_status(model))
         if has_values(model)
             decisions = Dict(
@@ -153,18 +146,18 @@ function solve_branch_and_cut(
                 nodes,
                 elapsed,
                 decisions,
+                distance_seconds,
             )
         end
-        # Lần hai không trả nghiệm: giữ nghiệm lần một (đã lưu trong start value).
+        # No solution from the second solve: keep the first (stored as start values).
         decisions = Dict(
             key => round(Int, start_value(variable))
             for (key, variable) in vars.logical
         )
         return SolveResult(method, status * "+DIST_" * status2 * "_KEEP_STAGE1",
-            stage1_objective, stage1_bound, nodes, elapsed, decisions)
+            stage1_objective, stage1_bound, nodes, elapsed, decisions, distance_seconds)
     end
 
-    # Chuyển giá trị số gần 0/1 thành số nguyên để dễ đọc và dựng tuyến.
     decisions = Dict(
         key => round(Int, value(variable))
         for (key, variable) in vars.logical
@@ -180,4 +173,3 @@ function solve_branch_and_cut(
         decisions,
     )
 end
-

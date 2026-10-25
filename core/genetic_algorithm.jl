@@ -1,18 +1,18 @@
-# Genetic Algorithm giải gần đúng bài toán mà không gọi MILP solver.
+# Genetic algorithm, plus the route construction, repair and evaluation shared
+# with Tabu Search and ALNS.
 if !isdefined(Main, :DebtRoutingData)
     include(joinpath(@__DIR__, "model.jl"))
 end
 
 using Random
 
-# Kết quả đánh giá một cá thể: tiền kỳ vọng, quãng đường và các tuyến.
 struct GAEvaluation
     expected_recovery::Float64
     total_distance::Float64
     routes::Dict{Tuple{Int,Int},Vector{Int}}
 end
 
-# So sánh từ điển: ưu tiên tiền kỳ vọng, sau đó mới đến quãng đường.
+# Lexicographic: higher expected collection first, then shorter distance.
 function is_better(left::GAEvaluation, right::GAEvaluation; tolerance=1.0e-6)
     if left.expected_recovery > right.expected_recovery + tolerance
         return true
@@ -22,13 +22,12 @@ function is_better(left::GAEvaluation, right::GAEvaluation; tolerance=1.0e-6)
     return left.total_distance < right.total_distance
 end
 
-# Tính tổng khoảng cách hoặc thời gian của một tuyến 0 -> ... -> 0.
+# Distance or time of a route 0 -> ... -> 0, depending on the matrix passed.
 function route_cost(route::Vector{Int}, matrix::Matrix{Float64})
     return sum(matrix[route[index] + 1, route[index + 1] + 1]
                for index in 1:(length(route) - 1))
 end
 
-# Dựng tuyến ban đầu bằng nearest-neighbor từ chi nhánh.
 function nearest_neighbor_route(customers::Vector{Int}, distance)
     isempty(customers) && return Int[0, 0]
     remaining = copy(customers)
@@ -44,8 +43,7 @@ function nearest_neighbor_route(customers::Vector{Int}, distance)
     return route
 end
 
-# 2-opt thử đảo từng đoạn và giữ phép đảo làm giảm tổng khoảng cách.
-# Cách tính lại toàn tuyến vẫn đúng khi ma trận đường bộ là bất đối xứng.
+# Each reversal is scored on the whole route, since the matrix is asymmetric.
 function two_opt!(route::Vector{Int}, distance; max_passes=20)
     length(route) <= 4 && return route
     for _ in 1:max_passes
@@ -73,17 +71,16 @@ function build_route(customers, data)
     return two_opt!(route, data.distance)
 end
 
-# Giá trị kỳ vọng của tập ngày đang được chọn cho một khách hàng.
 function customer_value(data, customer, days)
     isempty(days) && return 0.0
     return expected_value(data, customer, collect(days))
 end
 
-# Repair bảo đảm số lần thăm và ngân sách thời gian của mọi tuyến.
+# Enforce the visit limit (keep the days with the highest p), then drop the visit
+# with the smallest marginal loss from each route that runs over its budget.
 function repair!(genes::Matrix{Int}, data::DebtRoutingData)
     n, H = data.n, data.H
 
-    # Nếu vượt số lần thăm, giữ các ngày có xác suất cao nhất.
     for i in 1:n
         selected_days = findall(genes[i, :] .> 0)
         if length(selected_days) > data.max_visits[i]
@@ -98,7 +95,6 @@ function repair!(genes::Matrix{Int}, data::DebtRoutingData)
         end
     end
 
-    # Nếu một tuyến quá giờ, lần lượt bỏ lần thăm có mất mát kỳ vọng nhỏ nhất.
     for k in 1:data.K, t in 1:H
         while true
             customers = findall(genes[:, t] .== k)
@@ -124,7 +120,6 @@ function repair!(genes::Matrix{Int}, data::DebtRoutingData)
     return genes
 end
 
-# Đánh giá một cá thể sau khi repair.
 function evaluate_ga(genes::Matrix{Int}, data::DebtRoutingData)
     expected_recovery = 0.0
     for i in 1:data.n
@@ -144,7 +139,6 @@ function evaluate_ga(genes::Matrix{Int}, data::DebtRoutingData)
     return GAEvaluation(expected_recovery, total_distance, routes)
 end
 
-# Chọn một bố/mẹ bằng tournament selection.
 function tournament_select(population, evaluations, rng; tournament_size=3)
     candidates = rand(rng, eachindex(population), tournament_size)
     winner = candidates[1]
@@ -154,7 +148,7 @@ function tournament_select(population, evaluations, rng; tournament_size=3)
     return population[winner]
 end
 
-# Lai ghép đồng nhất: mỗi gene được lấy ngẫu nhiên từ bố hoặc mẹ.
+# Uniform crossover.
 function crossover(parent_a, parent_b, rng)
     child = similar(parent_a)
     for index in eachindex(child)
@@ -163,7 +157,6 @@ function crossover(parent_a, parent_b, rng)
     return child
 end
 
-# Đột biến một ô: bỏ lần thăm hoặc gán cho một cán bộ ngẫu nhiên.
 function mutate!(genes, data, rng, mutation_rate)
     for index in eachindex(genes)
         if rand(rng) < mutation_rate
@@ -173,7 +166,7 @@ function mutate!(genes, data, rng, mutation_rate)
     return genes
 end
 
-# Chuyển cá thể GA thành định dạng quyết định chung để dùng hàm print_result.
+# Gene matrix and routes -> the x/y/z decisions used by the MILP code.
 function ga_decisions(best_genes, routes, data)
     decisions = Dict{Tuple,Int}()
     for i in 1:data.n, k in 1:data.K, t in 1:data.H
@@ -190,14 +183,11 @@ function ga_decisions(best_genes, routes, data)
 end
 
 """
-Chạy Genetic Algorithm.
+    solve_genetic_algorithm(data; kwargs...)
 
-population_size: số cá thể trong một thế hệ.
-generations: số thế hệ tối đa.
-stagnation_generations: dừng sớm sau số thế hệ liên tiếp không cải thiện;
-đặt bằng 0 để tắt dừng sớm.
-mutation_rate: xác suất đột biến của mỗi gene.
-elite_count: số cá thể tốt nhất được giữ nguyên sang thế hệ sau.
+Gene (i, t) is 0 (no visit) or the officer k who visits customer i on day t.
+Stops after `generations`, or after `stagnation_generations` generations without
+improvement (0 disables early stopping).
 """
 function solve_genetic_algorithm(
     data::DebtRoutingData;
@@ -218,7 +208,6 @@ function solve_genetic_algorithm(
     rng = MersenneTwister(seed)
     started = time()
 
-    # Gene (i,t) bằng 0 nếu không thăm, hoặc bằng k nếu cán bộ k thực hiện.
     population = Matrix{Int}[]
     for _ in 1:population_size
         genes = zeros(Int, data.n, data.H)
@@ -233,10 +222,8 @@ function solve_genetic_algorithm(
     best_genes = copy(population[1])
     best_evaluation = evaluate_ga(best_genes, data)
     stagnant_generations = 0
-    generations_run = 0
 
     for generation in 1:generations
-        generations_run = generation
         evaluations = [evaluate_ga(individual, data) for individual in population]
         ranking = sortperm(
             eachindex(population);
@@ -251,13 +238,11 @@ function solve_genetic_algorithm(
             stagnant_generations += 1
         end
 
-        # A value of zero disables early stopping.
         if stagnation_generations > 0 &&
            stagnant_generations >= stagnation_generations
             break
         end
 
-        # Elitism giữ lại các cá thể tốt nhất.
         next_population = [
             copy(population[ranking[index]]) for index in 1:elite_count
         ]
@@ -272,15 +257,7 @@ function solve_genetic_algorithm(
         population = next_population
     end
 
-    if generations_run < generations
-        println(
-            "GA early stopping: no improvement for " *
-            "$(stagnation_generations) generations (stopped at generation " *
-            "$(generations_run)/$(generations)).",
-        )
-    end
-
-    # Đánh giá thế hệ cuối để không bỏ sót cá thể mới sinh ở vòng cuối.
+    # The last generation has not been evaluated inside the loop.
     for individual in population
         evaluation = evaluate_ga(individual, data)
         if is_better(evaluation, best_evaluation)
@@ -299,4 +276,3 @@ function solve_genetic_algorithm(
         ga_decisions(best_genes, best_evaluation.routes, data),
     )
 end
-

@@ -1,137 +1,147 @@
-# Tổng quan: bài toán định tuyến thu hồi nợ nhiều ngày
+# Overview: multi-day debt collection routing
 
-Tài liệu này mô tả bài toán, dữ liệu và các hướng giải ở mức tổng quan. Chi
-tiết nằm ở các tài liệu khác:
+This document describes the problem, the data and the solution approaches at a
+high level. Details are in the other documents:
 
-| Tài liệu | Nội dung |
+| Document | Contents |
 |---|---|
-| [01_mo_hinh_toan.md](01_mo_hinh_toan.md) | Ký hiệu, mô hình MILP (1)–(15), mục tiêu phụ, mô hình động |
-| [02_bieu_dien_nghiem.md](02_bieu_dien_nghiem.md) | Biểu diễn nghiệm, phép biến đổi giữa MILP và heuristic |
-| [03_phuong_phap_giai.md](03_phuong_phap_giai.md) | Branch-and-Cut, GA, Tabu Search, ALNS; cách đọc gap |
-| [04_thuc_nghiem.md](04_thuc_nghiem.md) | Thiết kế thí nghiệm, bảng kết quả, hình vẽ, nhận xét |
-| [de_xuat_de_tai.docx](de_xuat_de_tai.docx) | Đề xuất đề tài ban đầu |
+| [01_mathematical_model.md](01_mathematical_model.md) | Notation, MILP model (1)–(15), secondary objective, dynamic model |
+| [02_solution_representation.md](02_solution_representation.md) | Solution representation, transformations between MILP and heuristics |
+| [03_solution_methods.md](03_solution_methods.md) | Branch-and-Cut, GA, Tabu Search, ALNS; how to read the gap |
+| [04_experiments.md](04_experiments.md) | Experimental design, result tables, figures, discussion |
+| [de_xuat_de_tai.docx](de_xuat_de_tai.docx) | Original project proposal (Vietnamese) |
 
-## 1. Bài toán
+## 1. Problem
 
-Một chi nhánh ngân hàng có **K cán bộ thu hồi nợ** đi xe máy và **n khách hàng
-quá hạn** trong một kỳ **H ngày làm việc**. Mỗi ngày, mỗi cán bộ xuất phát từ
-chi nhánh, thăm một số khách rồi quay về, trong giới hạn **B phút** (di chuyển
-cộng thời gian làm việc với khách).
+A bank branch has **K debt collection officers** on motorbikes and **n overdue
+customers** over a period of **H working days**. Each day, each officer leaves
+the branch, visits some customers and returns, within a limit of **B minutes**
+(travel plus time spent with customers).
 
-Khi được thăm vào ngày t, khách i trả đủ số tiền mục tiêu w(i) với xác suất
-p(i,t); nếu không trả thì thu được 0. Xác suất **giảm dần theo ngày**: để càng
-muộn càng khó thu. Một khách có thể được thăm lại, tối đa m lần trong kỳ.
+When visited on day t, customer i pays the full target amount w(i) with
+probability p(i,t); otherwise nothing is collected. The probability
+**decreases day by day**: the longer we wait, the harder it is to collect. A
+customer may be visited again, at most m times in the period.
 
-**Câu hỏi:** mỗi ngày, cán bộ nào thăm những khách nào và theo thứ tự nào, để
-**tổng tiền thu hồi kỳ vọng** trong cả kỳ lớn nhất? Khi hai kế hoạch có cùng
-giá trị kỳ vọng, chọn kế hoạch có tổng quãng đường nhỏ hơn.
+**Question:** on each day, which officer visits which customers and in what
+order, so that the **total expected amount collected** over the period is
+maximised? When two plans have the same expected value, choose the one with the
+shorter total distance.
 
-Giá trị kỳ vọng của khách i khi được thăm vào tập ngày S là
+The expected value of customer i when visited on the set of days S is
 
 $$
 v(i,S)=w_i\Bigl[1-\prod_{t\in S}\bigl(1-p_{it}\bigr)\Bigr],
 $$
 
-tức w(i) nhân xác suất khách trả ở ít nhất một lần thăm. Hàm này không tuyến
-tính theo các lần thăm, nên mô hình chọn trước **lịch thăm S** cho mỗi khách
-(biến λ) với giá trị v(i,S) tính sẵn.
+i.e. w(i) times the probability that the customer pays at at least one visit.
+This function is not linear in the visits, so the model chooses a **visit
+schedule S** for each customer (variable λ) whose value v(i,S) is precomputed.
 
-### Liên hệ với bài toán gốc của môn học
+### Relation to the course's reference problem
 
-Bài toán gốc (Orange ROADEF 2026, T-Adaptive Segment Routing) giải nhiều
-**chu kỳ thời gian liên kết với nhau**: Step 6 giải một chu kỳ, Step 9 giải
-nhiều chu kỳ với ràng buộc nối giữa các chu kỳ. Đề tài này có cấu trúc tương ứng:
+The reference problem (Orange ROADEF 2026, T-Adaptive Segment Routing) solves
+several **linked time periods**: Step 6 solves one period, Step 9 solves several
+periods with linking constraints between them. This project has the same
+structure:
 
-| Orange T-ASR | Đề tài thu hồi nợ |
+| Orange T-ASR | Debt collection project |
 |---|---|
-| Step 6: một chu kỳ | **GD1**: một ngày (H = 1), mỗi khách tối đa 1 lần thăm |
-| Step 9: nhiều chu kỳ liên kết | **GD2**: năm ngày (H = 5), lịch thăm λ nối các ngày qua ràng buộc (3) và giới hạn m lần thăm |
-| Giới hạn thời gian 1800 s / 3600 s tỉ lệ theo số chu kỳ | 30 s / 150 s = 30 s × 5 ngày |
+| Step 6: one period | **Phase 1**: one day (H = 1), each customer visited at most once |
+| Step 9: several linked periods | **Phase 2**: five days (H = 5), schedule λ links the days through constraint (3) and the limit of m visits |
+| Time limit 1800 s / 3600 s, proportional to the number of periods | 30 s / 150 s = 30 s × 5 days |
 
-## 2. Đồ thị của bài toán
+## 2. Graphs
 
-Bài toán dùng hai tầng đồ thị:
+The problem uses two graph layers:
 
-1. **Tầng dữ liệu:** mạng đường OSM của nội thành Hà Nội, 57.242 nút và
-   130.220 cạnh có hướng (có đường một chiều, tốc độ theo loại đường).
-2. **Tầng mô hình:** đồ thị đầy đủ có hướng G = (V, A) với
-   |V| = n + 1 đỉnh (chi nhánh 0 và n khách) và |A| = n(n + 1) cung.
-   Mỗi cung (i, j) mang quãng đường và thời gian của **đường đi ngắn nhất** từ
-   i tới j trên tầng dữ liệu.
+1. **Data layer:** the OSM road network of inner Hanoi, 57,242 nodes and
+   130,220 directed edges (including one-way streets, speeds by road type).
+2. **Model layer:** a complete directed graph G = (V, A) with
+   |V| = n + 1 vertices (branch 0 and n customers) and |A| = n(n + 1) arcs.
+   Each arc (i, j) carries the distance and travel time of the **shortest
+   path** from i to j in the data layer.
 
-![Hai tầng đồ thị](../figures/INS_XS_n20_H5/graph.png)
+![Two graph layers](../figures/INS_XS_n20_H5/graph.png)
 
-## 3. Dữ liệu
+## 3. Data
 
-Bộ dữ liệu `collection_routing_dataset_v3/` (README riêng trong thư mục đó)
-được dựng từ nguồn công khai và các giả định ghi rõ:
+The dataset `collection_routing_dataset_v3/` (with its own README) is built from
+public sources plus explicitly stated assumptions:
 
-| Thành phần | Nguồn | Cố định hay chọn |
+| Component | Source | Fixed or chosen |
 |---|---|---|
-| Mạng đường, vị trí chi nhánh | OpenStreetMap | Cố định |
-| Vị trí khách | Lấy mẫu theo dân số 27 phường | Cố định theo seed của từng bộ khách |
-| Hồ sơ nhân khẩu | NVIDIA Nemotron Personas (Việt Nam) | Cố định |
-| Hạn mức, tỷ lệ sử dụng thẻ | UCI Default of Credit Card (hình dạng phân bố) | Cố định |
-| Khoản vay, nhóm nợ, số ngày quá hạn | Giả định (log-chuẩn, tỷ trọng theo nhóm 2–5) | Cố định |
-| Xác suất p(i,t) | Giả định: h · p₀(nhóm) · (1 − 0,3·f(DPD)) · (1 − δ)^(t−1) | Chọn kịch bản h = 0,5 / 1 / 1,5 |
-| Cán bộ, giờ làm việc | 4 cán bộ, 480 phút/ngày, kỳ 02–06/11/2026 | Chọn K, B |
-| Số lần thăm tối đa m | Tham số mô hình | Chọn m |
+| Road network, branch location | OpenStreetMap | Fixed |
+| Customer locations | Sampled by population of 27 wards | Fixed by the seed of each customer set |
+| Demographic profiles | NVIDIA Nemotron Personas (Vietnam) | Fixed |
+| Credit limit, card utilisation | UCI Default of Credit Card (distribution shape) | Fixed |
+| Loan amount, debt group, days past due | Assumed (log-normal, shares by groups 2–5) | Fixed |
+| Probability p(i,t) | Assumed: h · p₀(group) · (1 − 0.3·f(DPD)) · (1 − δ)^(t−1) | Choose scenario h = 0.5 / 1 / 1.5 |
+| Officers, working hours | 4 officers, 480 min/day, period 02–06/11/2026 | Choose K, B |
+| Maximum visits m | Model parameter | Choose m |
 
-Có 5 bộ khách: **MAIN** (500 khách) và **REP1–REP4** (200 khách mỗi bộ), mỗi bộ
-sinh với một seed khác nhau. Các instance lồng nhau:
-INS_XS (30) ⊂ INS_S (80) ⊂ INS_M (200) ⊂ INS_L (500) lấy từ MAIN;
-REPk_S (80) ⊂ REPk_M (200) lấy từ bộ REPk.
+There are 5 customer sets: **MAIN** (500 customers) and **REP1–REP4** (200
+customers each), each generated with a different seed. The instances are
+nested: INS_XS (30) ⊂ INS_S (80) ⊂ INS_M (200) ⊂ INS_L (500) are taken from
+MAIN; REPk_S (80) ⊂ REPk_M (200) are taken from REPk.
 
-![Vị trí khách hàng INS_S](../figures/INS_S_n80_H5/customers.png)
+![Customer locations, INS_S](../figures/INS_S_n80_H5/customers.png)
 
-**Chọn instance cho thí nghiệm** (chi tiết ở [04_thuc_nghiem.md](04_thuc_nghiem.md)):
-cố định mọi tham số trừ số khách n (K = 2, B = 480 phút, m = 2, kịch bản p cơ
-sở) và tăng n theo mốc 10, 20, 30, 50, 80 bằng cách lấy n khách đầu của instance
-lồng nhau. Ở mốc 80 khách dùng thêm REP1–REP4 để kiểm tra kết quả không phụ
-thuộc một bộ khách cụ thể.
+**Instance selection for the experiments** (details in
+[04_experiments.md](04_experiments.md)): all parameters are fixed except the
+number of customers n (K = 2, B = 480 minutes, m = 2, base p-scenario), and n is
+increased through 10, 20, 30, 50, 80 by taking the first n customers of the
+nested instances. At 80 customers REP1–REP4 are also used, to check that the
+results do not depend on one particular customer set.
 
-## 4. Các hướng giải
+## 4. Solution approaches
 
-### 4.1. Lập kế hoạch tĩnh (bài toán chính)
+### 4.1. Static planning (main problem)
 
-Giải **một lần** cho cả H ngày, tối đa hóa giá trị kỳ vọng:
+Solve **once** for all H days, maximising expected value:
 
-| Phương pháp | Loại | Bảo đảm | File |
+| Method | Type | Guarantee | File |
 |---|---|---|---|
-| Branch-and-Cut (HiGHS) | Chính xác | Có cận trên; chứng minh tối ưu khi kịp | [branch_and_cut.jl](../core/branch_and_cut.jl) |
-| BnC khởi động ấm | Chính xác + heuristic | Bắt đầu từ nghiệm ALNS | như trên |
-| Tabu Search | Metaheuristic | Không | [tabu_search.jl](../core/tabu_search.jl) |
-| ALNS | Metaheuristic | Không | [alns.jl](../core/alns.jl) |
-| Genetic Algorithm | Metaheuristic | Không | [genetic_algorithm.jl](../core/genetic_algorithm.jl) |
+| Branch-and-Cut (HiGHS) | Exact | Upper bound; proves optimality if time allows | [branch_and_cut.jl](../core/branch_and_cut.jl) |
+| Warm-started BnC | Exact + heuristic | Starts from the ALNS solution | same |
+| Tabu Search | Metaheuristic | None | [tabu_search.jl](../core/tabu_search.jl) |
+| ALNS | Metaheuristic | None | [alns.jl](../core/alns.jl) |
+| Genetic Algorithm | Metaheuristic | None | [genetic_algorithm.jl](../core/genetic_algorithm.jl) |
 
-Ba metaheuristic dùng chung biểu diễn ma trận G(i,t) ∈ {0, 1, …, K} (khách i,
-ngày t, cán bộ nào thăm), chung thủ tục dựng tuyến (nearest-neighbor + 2-opt) và
-chung luật dừng: tối đa 300 vòng, dừng sớm sau 50 vòng liên tiếp không cải thiện.
+The three metaheuristics share the matrix representation G(i,t) ∈ {0, 1, …, K}
+(customer i, day t, which officer visits), the same route construction
+(nearest-neighbour + 2-opt) and the same stopping rule: at most 300
+iterations, stopping early after 50 consecutive iterations without
+improvement.
 
-### 4.2. Thực hiện trong môi trường ngẫu nhiên (mở rộng)
+### 4.2. Execution under uncertainty (extension)
 
-Kế hoạch tĩnh không dùng thông tin mới: khách đã trả ở ngày 1 vẫn nằm trong
-lịch ngày 3. Ba chính sách được so sánh bằng mô phỏng Monte Carlo:
+A static plan does not use new information: a customer who paid on day 1 is
+still in the day-3 schedule. Three policies are compared by Monte Carlo
+simulation:
 
-| Chính sách | Lập kế hoạch khi nào | Cho bao nhiêu ngày |
+| Policy | When it plans | For how many days |
 |---|---|---|
-| Tĩnh | Một lần đầu kỳ | Cả H ngày |
-| Cuốn chiếu (rolling horizon) | Đầu mỗi ngày, sau khi biết ai đã trả | Các ngày còn lại |
-| Tham lam (myopic) | Đầu mỗi ngày | Chỉ ngày hôm đó |
+| Static | Once, at the start of the period | All H days |
+| Rolling horizon | At the start of each day, after observing who has paid | The remaining days |
+| Myopic (greedy) | At the start of each day | That day only |
 
-Cả ba dùng ALNS làm bộ giải và cùng dãy số ngẫu nhiên trong mỗi kịch bản.
+All three use ALNS as the solver and the same random numbers within each
+scenario.
 
-## 5. Kết quả chính
+## 5. Main results
 
-Tóm tắt; bảng đầy đủ ở [04_thuc_nghiem.md](04_thuc_nghiem.md).
+Summary; full tables in [04_experiments.md](04_experiments.md).
 
-- Đến 30 khách, Branch-and-Cut chứng minh tối ưu ở cả hai giai đoạn và mọi
-  metaheuristic đều tìm đúng nghiệm tối ưu.
-- Từ 50 khách, Branch-and-Cut hết giờ gần như ngay tại nút gốc, nghiệm tìm được
-  rất kém (gap hàng trăm đến hàng chục nghìn %) dù cận trên khá chặt.
-- Metaheuristic đạt gap 0,1–3,7% so với cận đó trong vài giây đến vài chục giây.
-  ALNS cho gap nhỏ nhất ở GD2, Tabu nhanh nhất.
-- Khởi động ấm Branch-and-Cut từ nghiệm ALNS giữ được chất lượng của ALNS nhưng
-  không cải thiện thêm trong 150 s.
+- Up to 30 customers, Branch-and-Cut proves optimality in both phases and every
+  metaheuristic finds the optimal solution.
+- From 50 customers, Branch-and-Cut runs out of time almost at the root node,
+  and its solutions are very poor (gaps from hundreds to tens of thousands of
+  percent), even though the upper bound is fairly tight.
+- The metaheuristics reach gaps of 0.1–3.7% against that bound in a few seconds
+  to a few tens of seconds. ALNS has the smallest gap in Phase 2, Tabu is the
+  fastest.
+- Warm-starting Branch-and-Cut from the ALNS solution keeps the ALNS quality but
+  does not improve it within 150 s.
 
-![Tuyến 5 ngày INS_S](../figures/INS_S_n80_H5/routes_overview.png)
+![5-day routes, INS_S](../figures/INS_S_n80_H5/routes_overview.png)

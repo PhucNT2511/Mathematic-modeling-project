@@ -1,0 +1,43 @@
+{
+  "runs": 10,
+  "seed": 2026,
+  "max_visits": 2,
+  "phases": [
+    {
+      "name": "GD2_nam_ngay",
+      "days": 5,
+      "time_limit_seconds": 150,
+      "instances": [
+        {
+          "instance": "INS_S"
+        }
+      ]
+    }
+  ],
+  "branch_and_cut": {
+    "mip_gap": 0.0001,
+    "symmetry_breaking": true,
+    "minimize_distance": true,
+    "modes": [
+      "cold"
+    ]
+  },
+  "tabu": {
+    "enabled": true,
+    "iterations": 1500,
+    "neighborhood_size": 40,
+    "tabu_tenure": 15,
+    "stagnation_iterations": 250
+  },
+  "alns": {
+    "enabled": true,
+    "iterations": 1500,
+    "stagnation_iterations": 250
+  },
+  "ga": {
+    "enabled": true,
+    "population_size": 80,
+    "generations": 1500,
+    "stagnation_generations": 250
+  }
+}

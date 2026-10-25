@@ -1,11 +1,11 @@
-# Dữ liệu rất nhỏ chỉ dùng để kiểm tra và so sánh hai thuật toán.
+# Tiny random instance for tests.
 if !isdefined(Main, :DebtRoutingData)
     include(joinpath(@__DIR__, "..", "core", "model.jl"))
 end
 
 using Random
 
-# Sinh dữ liệu Euclid có seed để mỗi lần kiểm thử cho cùng một kết quả.
+# Euclidean points with a fixed seed, so tests are reproducible.
 function sample_data(; n=8, K=2, H=3, seed=2026)
     rng = MersenneTwister(seed)
     coordinates = 20.0 .* rand(rng, n + 1, 2)

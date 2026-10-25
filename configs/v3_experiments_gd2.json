@@ -38,6 +38,7 @@
   "branch_and_cut": {
     "mip_gap": 0.0001,
     "symmetry_breaking": true,
+    "minimize_distance": true,
     "modes": [
       "cold",
       "warm"
