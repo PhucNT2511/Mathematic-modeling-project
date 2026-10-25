@@ -134,3 +134,8 @@ config to start from scratch.
 
 Mathematical Modeling course project, School of Information and Communication
 Technology (SOICT), Hanoi University of Science and Technology.
+
+## Project Report
+
+The report is written in LaTeX on
+[Overleaf](https://www.overleaf.com/project/6adc64df993ecc93342937cd/share#0cb3b0da80856dc2e617d4bb8c8405ea78f29ab8c936fa72).
