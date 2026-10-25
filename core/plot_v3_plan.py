@@ -6,6 +6,7 @@ Mỗi cán bộ một họ màu (xanh, đỏ, tím, vàng, lục); trong một h
 và nhạt dần đến ngày cuối. Hình được ghi vào figures/<tên kế hoạch>/:
 - customers.png: vị trí khách, cỡ điểm theo số tiền mục tiêu, màu theo nhóm nợ;
 - graph.png: mạng đường OSM (tầng dữ liệu) và đồ thị đầy đủ G=(V,A) (tầng mô hình);
+- routes_grid.png: lưới cán bộ x ngày, khách đánh số theo thứ tự thăm;
 - routes_overview.png: mọi tuyến của mọi cán bộ, mọi ngày trên một bản đồ;
 - routes_by_day.png: mỗi ngày một ô, các cán bộ cùng ngày;
 - routes_by_officer.png: mỗi cán bộ một ô, các ngày đậm-nhạt dần;
@@ -17,7 +18,9 @@ import math
 from pathlib import Path
 
 import matplotlib
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import numpy as np
 import networkx as nx
 import pandas as pd
 from matplotlib.collections import LineCollection
@@ -26,17 +29,31 @@ from matplotlib.lines import Line2D
 ROOT = Path(__file__).resolve().parents[1]
 CSV = ROOT / "collection_routing_dataset_v3" / "csv"
 FIGURES = ROOT / "figures"
-FAMILIES = ["Blues", "Reds", "Purples", "YlOrBr", "Greens"]
-FAMILY_NAMES = ["xanh", "đỏ", "tím", "vàng", "lục"]
-GROUP_COLORS = {2: "#68d391", 3: "#f6e05e", 4: "#ed8936", 5: "#c53030"}
-ROAD = "#e2e7ee"
+# Màu gốc dịu mắt (độ bão hòa vừa phải) cho từng cán bộ: xanh dương, đỏ san hô, tím oải hương, vàng hổ phách, xanh ngọc.
+BASE_COLORS = ["#3e7cb1", "#e0605e", "#8e6bbf", "#e3a33b", "#3ba99c"]
+FAMILY_NAMES = ["xanh", "đỏ", "tím", "vàng", "ngọc"]
+FAMILIES = BASE_COLORS
+GROUP_COLORS = {2: "#8fcf9b", 3: "#f2d16b", 4: "#f0a35e", 5: "#d9534f"}
+ROAD = "#e5e9f0"
+
+
+def _mix(color, other, w):
+    a, b = np.array(mcolors.to_rgb(color)), np.array(mcolors.to_rgb(other))
+    return tuple((1 - w) * a + w * b)
 
 
 def shade(k, t, H):
-    """Màu của cán bộ k ngày t: ngày 1 đậm nhất, ngày H nhạt nhất."""
-    cmap = matplotlib.colormaps[FAMILIES[(k - 1) % len(FAMILIES)]]
-    level = 0.95 if H == 1 else 0.95 - 0.55 * (t - 1) / (H - 1)
-    return cmap(level)
+    """Màu của cán bộ k ngày t: ngày 1 đậm (pha đen 15%), ngày H nhạt (pha trắng 40%)."""
+    base = BASE_COLORS[(k - 1) % len(BASE_COLORS)]
+    x = 0.0 if H == 1 else (t - 1) / (H - 1)
+    return _mix(base, "black", 0.15 * (1 - 2 * x)) if x <= 0.5 else _mix(base, "white", 0.40 * (2 * x - 1))
+
+
+def text_color(rgb):
+    """Chữ trắng trên nền đậm, chữ đen trên nền nhạt."""
+    r, g, b = rgb[:3]
+    return "white" if 0.299 * r + 0.587 * g + 0.114 * b < 0.62 else "#1a202c"
+
 
 
 def load_points(plan):
@@ -120,7 +137,7 @@ class Plotter:
         for (k, t), stops in self.plan.groupby(["officer", "day"]):
             yield int(k), int(t), stops.sort_values("stop_order")
 
-    def draw_route(self, ax, k, t, stops, lw=2.0, size=55):
+    def draw_route(self, ax, k, t, stops, lw=2.0, size=55, numbered=False):
         seq = stops.location_id.tolist()
         color = shade(k, t, self.H)
         segments = [self.road_path(a, b) for a, b in zip(seq, seq[1:])]
@@ -137,6 +154,11 @@ class Plotter:
         visited = [x for x in seq if x != "CN01"]
         ax.scatter(self.points.lon[visited], self.points.lat[visited], s=size,
                    color=[color], edgecolor="white", lw=1.0, zorder=5)
+        if numbered:
+            for order, cid in enumerate(visited, start=1):
+                ax.text(self.points.lon[cid], self.points.lat[cid], str(order),
+                        ha="center", va="center", fontsize=6.5, fontweight="bold",
+                        color=text_color(color), zorder=6)
 
     def legend(self, ax, officers=None, days=None, **kw):
         officers = officers or range(1, self.K + 1)
@@ -288,7 +310,34 @@ class Plotter:
         plt.close(fig)
         print("Saved:", path.relative_to(ROOT))
 
+    def figure_grid(self):
+        """Lưới cán bộ x ngày: mỗi ô một tuyến, khách đánh số theo thứ tự thăm."""
+        fig, axes = plt.subplots(self.K, self.H, figsize=(4.6 * self.H, 4.6 * self.K + 0.8),
+                                 squeeze=False)
+        routes = {(k, t): stops for k, t, stops in self.routes()}
+        for k in range(1, self.K + 1):
+            for t in range(1, self.H + 1):
+                ax = axes[k - 1, t - 1]
+                setup(ax, self.points)
+                draw_road(ax, self.nodes, self.shown)
+                ax.scatter(self.points.lon[1:], self.points.lat[1:], s=6,
+                           color="#cbd5e0", zorder=2)
+                stops = routes.get((k, t))
+                if stops is None:
+                    ax.set_title(f"CB{k} – ngày {t}: nghỉ", fontsize=10)
+                else:
+                    self.draw_route(ax, k, t, stops, lw=2.2, size=120, numbered=True)
+                    ax.set_title(f"CB{k} – ngày {t}: {len(stops) - 2} khách, "
+                                 f"{stops.leg_km.sum():.1f} km", fontsize=10,
+                                 color=shade(k, 1, self.H))
+                draw_depot(ax, self.points)
+        fig.suptitle(f"{self.title}\nmỗi ô là tuyến của một cán bộ trong một ngày: "
+                     f"xuất phát từ chi nhánh ★, thăm khách theo số 1, 2, 3, … rồi về ★",
+                     fontsize=13)
+        self.save(fig, "routes_grid")
+
     def all(self):
+        self.figure_grid()
         self.figure_customers()
         self.figure_graph()
         self.figure_overview()

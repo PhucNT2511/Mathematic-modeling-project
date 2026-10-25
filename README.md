@@ -5,9 +5,11 @@ nợ đi thăm n khách quá hạn trong H ngày trên mạng đường thật c
 cho **tổng tiền thu hồi kỳ vọng** lớn nhất. Một khách có thể được thăm lại, và
 xác suất trả nợ giảm dần theo ngày.
 
-![Tuyến 5 ngày của 2 cán bộ, 80 khách](figures/INS_S_n80_H5/routes_overview.png)
+![Tuyến 5 ngày của 2 cán bộ, 80 khách](figures/INS_S_n80_H5/routes_grid.png)
 
-*Mỗi cán bộ một họ màu (xanh, đỏ, …); ngày 1 đậm nhất, nhạt dần đến ngày 5.*
+*Mỗi hàng là một cán bộ, mỗi cột là một ngày. Cán bộ xuất phát từ chi nhánh ★,
+thăm khách theo số 1, 2, 3, … rồi quay về ★. Mỗi cán bộ một họ màu (xanh, đỏ, …),
+ngày 1 đậm nhất, nhạt dần đến ngày 5.*
 
 ## Nội dung
 

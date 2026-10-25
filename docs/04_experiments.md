@@ -240,6 +240,8 @@ xác suất trả nợ cao và khi số khách lớn.
 Kế hoạch 5 ngày của INS_S (ALNS). Mỗi cán bộ một họ màu; ngày 1 đậm nhất,
 nhạt dần đến ngày 5.
 
+![Cán bộ × ngày](../figures/INS_S_n80_H5/routes_grid.png)
+
 ![Theo ngày](../figures/INS_S_n80_H5/routes_by_day.png)
 
 ![Theo cán bộ](../figures/INS_S_n80_H5/routes_by_officer.png)
