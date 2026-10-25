@@ -46,8 +46,12 @@ function solve_tabu_search(
     neighborhood_size::Int=50,
     tabu_tenure::Int=15,
     seed::Int=2026,
+    stagnation_iterations::Int=0,
 )
+    stagnation_iterations >= 0 ||
+        throw(ArgumentError("stagnation_iterations must be non-negative"))
     rng = MersenneTwister(seed)
+    stagnant = 0
     started = time()
 
     current_genes = greedy_tabu_start(data)
@@ -108,7 +112,12 @@ function solve_tabu_search(
         if is_better(current_evaluation, best_evaluation)
             best_genes = copy(current_genes)
             best_evaluation = current_evaluation
+            stagnant = 0
+        else
+            stagnant += 1
         end
+        # Dừng sớm như GA: nhiều vòng liên tiếp không có nghiệm tốt nhất mới (0 = tắt).
+        stagnation_iterations > 0 && stagnant >= stagnation_iterations && break
     end
 
     return SolveResult(

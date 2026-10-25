@@ -1,0 +1,10 @@
+phase,name,source_instance,customers,officers,days,max_visits,minutes_per_day,total_debt_million_vnd,num_vars,num_constraints
+GD1_mot_ngay,INS_XS_n10_H1,INS_XS,10,2,1,1,480,490.596,272,287
+GD1_mot_ngay,INS_XS_n20_H1,INS_XS,20,2,1,1,480,641.379,942,967
+GD1_mot_ngay,INS_XS_n30_H1,INS_XS,30,2,1,1,480,1085.43,2012,2047
+GD1_mot_ngay,INS_S_n50_H1,INS_S,50,2,1,1,480,1473.41,5352,5407
+GD1_mot_ngay,INS_S_n80_H1,INS_S,80,2,1,1,480,2354.09,13362,13447
+GD1_mot_ngay,REP1_S_n80_H1,REP1_S,80,2,1,1,480,2288.74,13362,13447
+GD1_mot_ngay,REP2_S_n80_H1,REP2_S,80,2,1,1,480,2341.98,13362,13447
+GD1_mot_ngay,REP3_S_n80_H1,REP3_S,80,2,1,1,480,2352.67,13362,13447
+GD1_mot_ngay,REP4_S_n80_H1,REP4_S,80,2,1,1,480,2299.74,13362,13447

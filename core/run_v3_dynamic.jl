@@ -4,7 +4,8 @@ include(joinpath(@__DIR__, "..", "data_processing", "dynamic_v3_data.jl"))
 # Solve afresh every morning. Each method owns its own paid/attempt state,
 # while all methods see the same exogenous customer-day random draws.
 function run_dynamic_method(label, data, customer_ids, draws, scenario_id, config, seed;
-                            policy=nothing, on_transition=nothing, verbose=true)
+                            policy=nothing, on_transition=nothing, verbose=true,
+                            lookahead::Union{Nothing,Int}=nothing)
     paid = falses(data.n)
     attempts = zeros(Int, data.n)
     daily = NamedTuple[]
@@ -14,7 +15,7 @@ function run_dynamic_method(label, data, customer_ids, draws, scenario_id, confi
     runtime = 0.0
 
     for day in 1:data.H
-        residual, active = remaining_v3_data(data, paid, attempts, day)
+        residual, active = remaining_v3_data(data, paid, attempts, day; lookahead=lookahead)
         if isempty(active)
             push!(daily, (scenario=scenario_id, method=label, day=day,
                 solver="", status="NO_ELIGIBLE_CUSTOMERS", planned_expected=0.0,
@@ -38,7 +39,8 @@ function run_dynamic_method(label, data, customer_ids, draws, scenario_id, confi
                 tabu_tenure=Int(c["tabu_tenure"]), seed=seed + day - 1)
         elseif solver_label == "ALNS"
             c = config["alns"]
-            solve_alns(residual; iterations=Int(c["iterations"]), seed=seed + day - 1)
+            solve_alns(residual; iterations=Int(c["iterations"]),
+                stagnation_iterations=Int(get(c, "stagnation_iterations", 0)), seed=seed + day - 1)
         elseif solver_label == "Branch-and-Cut"
             c = config["branch_and_cut"]
             warm_start = solve_alns(residual; iterations=Int(config["alns"]["iterations"]),
@@ -151,7 +153,7 @@ function run_v3_dynamic(config_path)
             append!(visits, trace)
         end
     end
-    outdir = normpath(joinpath(@__DIR__, "..", "results", "v3_$(instance)"))
+    outdir = normpath(joinpath(@__DIR__, "..", "outputs", "v3_$(instance)"))
     mkpath(outdir)
     write_dynamic_csv(joinpath(outdir, "dynamic_summary.csv"),
         ["scenario", "method", "collected_million_vnd", "distance_km", "visits", "paid_customers", "total_seconds"],
@@ -172,6 +174,6 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     config_path = isempty(ARGS) ?
-        normpath(joinpath(@__DIR__, "..", "v3_comparison.json")) : abspath(ARGS[1])
+        normpath(joinpath(@__DIR__, "..", "configs", "v3_comparison.json")) : abspath(ARGS[1])
     run_v3_dynamic(config_path)
 end

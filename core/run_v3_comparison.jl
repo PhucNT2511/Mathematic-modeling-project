@@ -82,6 +82,7 @@ function run_v3_comparison(config_path)
         ("ALNS", () -> solve_alns(
             data;
             iterations=Int(alns_config["iterations"]),
+            stagnation_iterations=Int(get(alns_config, "stagnation_iterations", 0)),
             seed=seed,
         )),
         ("Branch-and-Cut", () -> solve_branch_and_cut(
@@ -111,7 +112,7 @@ function run_v3_comparison(config_path)
     # time out without an integer solution; that case remains visible in CSV.
     exact = records[end].result
     bound = isfinite(exact.bound) ? exact.bound : NaN
-    outdir = normpath(joinpath(@__DIR__, "..", "results", "v3_$(instance)"))
+    outdir = normpath(joinpath(@__DIR__, "..", "outputs", "v3_$(instance)"))
     mkpath(outdir)
     summary_file = joinpath(outdir, "base_method_comparison.csv")
     open(summary_file, "w") do io
@@ -151,6 +152,6 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     config_path = isempty(ARGS) ?
-        normpath(joinpath(@__DIR__, "..", "v3_comparison.json")) : abspath(ARGS[1])
+        normpath(joinpath(@__DIR__, "..", "configs", "v3_comparison.json")) : abspath(ARGS[1])
     run_v3_comparison(config_path)
 end

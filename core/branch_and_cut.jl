@@ -19,6 +19,11 @@ nhánh và tính cận. Đây là phương pháp nên dùng cho dữ liệu th�
   giữ giá trị thu hồi kỳ vọng ≥ Z* − value_tolerance·max(1, |Z*|) rồi tối
   thiểu tổng quãng đường. Lần hai dùng nghiệm lần một làm MIP start và giới
   hạn thời gian distance_time_limit.
+- symmetry_breaking: thêm ràng buộc (15) z[k,t] ≥ z[k+1,t] cho cán bộ cùng ngân sách.
+- random_seed: seed của HiGHS, dùng khi lặp nhiều lần chạy trên cùng instance.
+
+Số nút cây Branch-and-Bound (`nodes`) lấy từ HiGHS sau lần giải chính (tối đa
+tiền thu kỳ vọng); lần giải phụ cực tiểu quãng đường không được cộng vào.
 
 Đầu ra là một SolveResult chứa nghiệm tốt nhất và cận do solver cung cấp.
 """
@@ -56,6 +61,8 @@ function solve_branch_and_cut(
     minimize_distance::Bool=false,
     distance_time_limit::Float64=time_limit,
     value_tolerance::Float64=1.0e-6,
+    symmetry_breaking::Bool=false,
+    random_seed::Union{Nothing,Int}=nothing,
 )
     # Dựng mô hình với các biến x, y, z và lambda là biến nhị phân.
     model, vars = build_model(
@@ -63,6 +70,8 @@ function solve_branch_and_cut(
         integer_variables=true,
         time_limit=time_limit,
         mip_gap=mip_gap,
+        symmetry_breaking=symmetry_breaking,
+        random_seed=random_seed,
     )
     if initial_result !== nothing
         isfinite(initial_result.objective) || error("Warm start needs a feasible objective")
@@ -74,6 +83,11 @@ function solve_branch_and_cut(
     optimize!(model)
     elapsed = time() - started
     status = string(termination_status(model))
+    nodes = try
+        Int(MOI.get(model, MOI.NodeCount()))
+    catch
+        0
+    end
 
     # A zero-route incumbent is feasible but useless when a better heuristic
     # route is known. Keep its provenance explicit in the returned status.
@@ -84,7 +98,7 @@ function solve_branch_and_cut(
             status * "_HEURISTIC_FALLBACK",
             initial_result.objective,
             objective_bound(model),
-            0,
+            nodes,
             elapsed,
             initial_result.decisions,
         )
@@ -97,7 +111,7 @@ function solve_branch_and_cut(
             status,
             -Inf,
             objective_bound(model),
-            0,
+            nodes,
             elapsed,
             Dict{Tuple,Int}(),
         )
@@ -136,7 +150,7 @@ function solve_branch_and_cut(
                 status * "+DIST_" * status2,
                 value(expected_expr),
                 stage1_bound,
-                0,
+                nodes,
                 elapsed,
                 decisions,
             )
@@ -147,7 +161,7 @@ function solve_branch_and_cut(
             for (key, variable) in vars.logical
         )
         return SolveResult(method, status * "+DIST_" * status2 * "_KEEP_STAGE1",
-            stage1_objective, stage1_bound, 0, elapsed, decisions)
+            stage1_objective, stage1_bound, nodes, elapsed, decisions)
     end
 
     # Chuyển giá trị số gần 0/1 thành số nguyên để dễ đọc và dựng tuyến.
@@ -161,7 +175,7 @@ function solve_branch_and_cut(
         status,
         stage1_objective,
         stage1_bound,
-        0,
+        nodes,
         elapsed,
         decisions,
     )

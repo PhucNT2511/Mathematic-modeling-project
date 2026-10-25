@@ -1,0 +1,64 @@
+{
+  "runs": 10,
+  "seed": 2026,
+  "max_visits": 2,
+  "phases": [
+    {
+      "name": "GD2_nam_ngay",
+      "days": 5,
+      "time_limit_seconds": 150,
+      "instances": [
+        {
+          "instance": "INS_XS",
+          "customers": 10
+        },
+        {
+          "instance": "INS_XS",
+          "customers": 20
+        },
+        {
+          "instance": "INS_XS"
+        },
+        {
+          "instance": "INS_S",
+          "customers": 50
+        },
+        {
+          "instance": "INS_S"
+        },
+        {
+          "instance": "REP1_S"
+        },
+        {
+          "instance": "REP2_S"
+        }
+      ]
+    }
+  ],
+  "branch_and_cut": {
+    "mip_gap": 0.0001,
+    "symmetry_breaking": true,
+    "modes": [
+      "cold",
+      "warm"
+    ]
+  },
+  "tabu": {
+    "enabled": true,
+    "iterations": 300,
+    "neighborhood_size": 40,
+    "tabu_tenure": 15,
+    "stagnation_iterations": 50
+  },
+  "alns": {
+    "enabled": true,
+    "iterations": 300,
+    "stagnation_iterations": 50
+  },
+  "ga": {
+    "enabled": true,
+    "population_size": 80,
+    "generations": 300,
+    "stagnation_generations": 50
+  }
+}

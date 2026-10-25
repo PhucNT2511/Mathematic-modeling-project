@@ -10,6 +10,8 @@ using Printf
 #             trong tuyến; thời gian rảnh không dùng để thăm thêm khách.
 # CUỐN CHIẾU: đầu mỗi ngày giải lại cho ngày t..H với khách chưa trả và số lượt
 #             còn lại; chỉ thực hiện tuyến ngày t (dùng run_dynamic_method).
+# THAM LAM  : như cuốn chiếu nhưng mỗi sáng chỉ tối ưu ngày t (lookahead = 1),
+#             không tính đến các ngày sau. Bật bằng "include_myopic": true.
 # Chung     : lần thăm (i,t) thành công nếu u(s,i,t) < p(i,t); thành công thu đủ
 #             số tiền mục tiêu, thất bại thu 0; không thu trùng một khoản nợ.
 
@@ -88,8 +90,9 @@ function run_v3_static_vs_rolling(config_path)
     length(unique(ids)) == length(ids) || error("Duplicate Monte Carlo IDs")
     scenarios = String.(get(config, "p_scenarios", ["CO_SO"]))
     methods = String.(get(config, "methods", ["ALNS"]))
+    include_myopic = Bool(get(config, "include_myopic", true))
     root = normpath(joinpath(@__DIR__, "..", "collection_routing_dataset_v3"))
-    outdir = normpath(joinpath(@__DIR__, "..", "results", "v3_$(instance)", "static_vs_rolling"))
+    outdir = normpath(joinpath(@__DIR__, "..", "outputs", "v3_$(instance)", "static_vs_rolling"))
     mkpath(outdir)
 
     runs = NamedTuple[]
@@ -104,16 +107,26 @@ function run_v3_static_vs_rolling(config_path)
             plan === nothing && error("$method: no feasible static plan")
             @printf("[%s | %s | %s] kế hoạch tĩnh: E = %.3f tr, %.2f s\n",
                 instance, scenario, method, result.objective, static_seconds)
+            flush(stdout)
             for id in ids
                 s = execute_static_plan(data, plan, draws[id])
                 r, _, _ = run_dynamic_method(method, data, customer_ids, draws[id], id,
                                              config, seed; verbose=false)
+                g = include_myopic ? first(run_dynamic_method(method, data, customer_ids,
+                    draws[id], id, config, seed; verbose=false, lookahead=1)) :
+                    (collected=NaN, distance=NaN, visits=0, seconds=NaN)
                 push!(runs, (instance=instance, p_scenario=scenario, method=method, mc=id,
                     static_collected=s.collected, rolling_collected=r.collected,
+                    myopic_collected=g.collected,
                     static_distance=s.distance, rolling_distance=r.distance,
-                    static_visits=s.visits, rolling_visits=r.visits,
+                    myopic_distance=g.distance,
+                    static_visits=s.visits, rolling_visits=r.visits, myopic_visits=g.visits,
                     static_seconds=static_seconds, rolling_seconds=r.seconds,
-                    static_expected=result.objective))
+                    myopic_seconds=g.seconds, static_expected=result.objective))
+                @printf("   MC %3d: tĩnh %.2f | cuốn chiếu %.2f | tham lam %.2f
+",
+                    id, s.collected, r.collected, g.collected)
+                flush(stdout)
             end
             println("   xong $(length(ids)) kịch bản Monte Carlo")
         end
@@ -126,20 +139,24 @@ function run_v3_static_vs_rolling(config_path)
             println(io, join((getproperty(row, c) for c in cols), ','))
         end
     end
+    # Mỗi dòng so một chính sách với chính sách TĨNH trên cùng các kịch bản u.
+    policies = include_myopic ? ("rolling", "myopic") : ("rolling",)
     open(joinpath(outdir, "paired_summary.csv"), "w") do io
-        println(io, "instance,p_scenario,method,n_mc,metric,mean_static,mean_rolling,mean_diff_rolling_minus_static,sd_diff,ci95_low,ci95_high,share_rolling_better,mean_static_solve_seconds,mean_rolling_seconds_per_mc")
-        for scenario in scenarios, method in methods
+        println(io, "instance,p_scenario,method,n_mc,policy,metric,mean_static,mean_policy,mean_diff_policy_minus_static,sd_diff,ci95_low,ci95_high,share_policy_better,mean_static_solve_seconds,mean_policy_seconds_per_mc")
+        for scenario in scenarios, method in methods, policy in policies
             sub = [r for r in runs if r.p_scenario == scenario && r.method == method]
             n = length(sub)
-            for (metric, a, b, better) in (
-                    ("collected_million_vnd", :static_collected, :rolling_collected, (y, x) -> y > x + 1.0e-9),
-                    ("distance_km", :static_distance, :rolling_distance, (y, x) -> y < x - 1.0e-9))
-                sa = [getproperty(r, a) for r in sub]; sb = [getproperty(r, b) for r in sub]
+            for (metric, field, better) in (
+                    ("collected_million_vnd", "collected", (y, x) -> y > x + 1.0e-9),
+                    ("distance_km", "distance", (y, x) -> y < x - 1.0e-9))
+                sa = [getproperty(r, Symbol("static_", field)) for r in sub]
+                sb = [getproperty(r, Symbol(policy, "_", field)) for r in sub]
                 st = paired_stats(sb .- sa)
                 share = count(better(y, x) for (x, y) in zip(sa, sb)) / n
-                println(io, join((instance, scenario, method, n, metric,
+                seconds = sum(getproperty(r, Symbol(policy, "_seconds")) for r in sub) / n
+                println(io, join((instance, scenario, method, n, policy, metric,
                     sum(sa) / n, sum(sb) / n, st.mean, st.sd, st.lo, st.hi, share,
-                    sub[1].static_seconds, sum(r.rolling_seconds for r in sub) / n), ','))
+                    sub[1].static_seconds, seconds), ','))
             end
         end
     end
@@ -148,6 +165,6 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     config_path = isempty(ARGS) ?
-        normpath(joinpath(@__DIR__, "..", "v3_static_vs_rolling.json")) : abspath(ARGS[1])
+        normpath(joinpath(@__DIR__, "..", "configs", "v3_static_vs_rolling.json")) : abspath(ARGS[1])
     run_v3_static_vs_rolling(config_path)
 end

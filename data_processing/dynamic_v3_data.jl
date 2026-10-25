@@ -28,17 +28,24 @@ function load_v3_draws(root, customer_ids, horizon, scenario_ids)
     return draws
 end
 
-"""Make the residual routing problem after prior days' payments and visits."""
-function remaining_v3_data(data::DebtRoutingData, paid, attempts, day)
+"""Make the residual routing problem after prior days' payments and visits.
+
+`lookahead` giới hạn số ngày được nhìn trước: `nothing` lấy mọi ngày còn lại
+(cuốn chiếu), `1` chỉ tối ưu ngày hôm nay (tham lam).
+"""
+function remaining_v3_data(data::DebtRoutingData, paid, attempts, day;
+                           lookahead::Union{Nothing,Int}=nothing)
     1 <= day <= data.H || error("Day outside planning horizon")
     active = [i for i in 1:data.n if !paid[i] && attempts[i] < data.max_visits[i]]
     nodes = [1; active .+ 1]
+    last_day = lookahead === nothing ? data.H : min(data.H, day + lookahead - 1)
+    H = last_day - day + 1
     residual = DebtRoutingData(
-        length(active), data.K, data.H - day + 1,
-        data.debt[active], data.probability[active, day:end],
+        length(active), data.K, H,
+        data.debt[active], data.probability[active, day:last_day],
         data.distance[nodes, nodes], data.travel_time[nodes, nodes],
-        data.service_time[active], data.daily_budget[:, day:end],
-        data.max_visits[active] .- attempts[active],
+        data.service_time[active], data.daily_budget[:, day:last_day],
+        min.(data.max_visits[active] .- attempts[active], H),
     )
     return residual, active
 end

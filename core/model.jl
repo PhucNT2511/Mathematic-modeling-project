@@ -54,11 +54,14 @@ function build_model(
     integer_variables::Bool,
     time_limit::Float64=300.0,
     mip_gap::Float64=1.0e-4,
+    symmetry_breaking::Bool=false,
+    random_seed::Union{Nothing,Int}=nothing,
 )
     model = Model(HiGHS.Optimizer)
     set_silent(model)
     set_attribute(model, "time_limit", time_limit)
     integer_variables && set_attribute(model, "mip_rel_gap", mip_gap)
+    random_seed === nothing || set_attribute(model, "random_seed", random_seed)
 
     n, K, H = data.n, data.K, data.H
     N, V = 1:n, 0:n
@@ -164,6 +167,15 @@ function build_model(
             u[(i, k, t)] - u[(j, k, t)] + n * x[(i, j, k, t)]
             <= n - 1 + n * (1 - y[(j, k, t)]),
         )
+    end
+    # (15) Phá đối xứng: nếu các cán bộ có cùng ngân sách ngày t thì hoán đổi
+    # nhãn cán bộ cho ra cùng một nghiệm. Buộc dùng cán bộ theo thứ tự 1, 2, ...
+    # chỉ loại các nghiệm trùng lặp, không làm mất nghiệm tối ưu.
+    if symmetry_breaking
+        for t in 1:H, k in 1:K-1
+            data.daily_budget[k, t] == data.daily_budget[k + 1, t] || continue
+            @constraint(model, z[(k, t)] >= z[(k + 1, t)])
+        end
     end
 
     return model, (

@@ -185,8 +185,12 @@ function solve_alns(
     reaction_factor::Float64=0.20,
     cooling_rate::Float64=0.995,
     seed::Int=2026,
+    stagnation_iterations::Int=0,
 )
+    stagnation_iterations >= 0 ||
+        throw(ArgumentError("stagnation_iterations must be non-negative"))
     rng = MersenneTwister(seed)
+    stagnant = 0
     started = time()
 
     # Greedy repair từ nghiệm rỗng tạo nghiệm xuất phát khả thi.
@@ -247,6 +251,7 @@ function solve_alns(
             current_genes = candidate_genes
             current_evaluation = candidate_evaluation
         end
+        stagnant = reward == 10.0 ? 0 : stagnant + 1
         destroy_scores[destroy_index] += reward
         repair_scores[repair_index] += reward
         temperature *= cooling_rate
@@ -272,6 +277,8 @@ function solve_alns(
             fill!(destroy_uses, 0)
             fill!(repair_uses, 0)
         end
+        # Dừng sớm như GA: nhiều vòng liên tiếp không có nghiệm tốt nhất mới (0 = tắt).
+        stagnation_iterations > 0 && stagnant >= stagnation_iterations && break
     end
 
     return SolveResult(
