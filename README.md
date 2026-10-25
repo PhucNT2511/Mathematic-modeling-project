@@ -128,3 +128,8 @@ các lần đã xong. Đặt `"resume": false` trong cấu hình để chạy l�
 
 Đồ án môn Mô hình hóa toán học, Trường Công nghệ Thông tin và Truyền thông
 (SOICT), Đại học Bách khoa Hà Nội.
+
+## Project Report
+
+The report is written in LaTeX on Overleaf.
+(https://www.overleaf.com/project/6adc64df993ecc93342937cd/share#0cb3b0da80856dc2e617d4bb8c8405ea78f29ab8c936fa72))
