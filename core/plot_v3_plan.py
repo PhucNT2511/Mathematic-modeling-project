@@ -29,7 +29,7 @@ FIGURES = ROOT / "figures"
 FAMILIES = ["Blues", "Reds", "Purples", "YlOrBr", "Greens"]
 FAMILY_NAMES = ["xanh", "đỏ", "tím", "vàng", "lục"]
 GROUP_COLORS = {2: "#68d391", 3: "#f6e05e", 4: "#ed8936", 5: "#c53030"}
-ROAD = "#d5dbe3"
+ROAD = "#e2e7ee"
 
 
 def shade(k, t, H):
@@ -88,7 +88,7 @@ def draw_road(ax, nodes, shown):
 
 
 def draw_depot(ax, points):
-    ax.scatter(points.lon["CN01"], points.lat["CN01"], marker="*", s=380,
+    ax.scatter(points.lon["CN01"], points.lat["CN01"], marker="*", s=600,
                color="#1a202c", edgecolor="white", lw=1.2, zorder=7)
 
 
@@ -120,7 +120,7 @@ class Plotter:
         for (k, t), stops in self.plan.groupby(["officer", "day"]):
             yield int(k), int(t), stops.sort_values("stop_order")
 
-    def draw_route(self, ax, k, t, stops, lw=1.8):
+    def draw_route(self, ax, k, t, stops, lw=2.0, size=55):
         seq = stops.location_id.tolist()
         color = shade(k, t, self.H)
         segments = [self.road_path(a, b) for a, b in zip(seq, seq[1:])]
@@ -133,10 +133,10 @@ class Plotter:
                 (x0, y0), (x1, y1) = seg[max(m - 1, 0)], seg[m]
                 ax.annotate("", xy=(x1, y1), xytext=(x0, y0), zorder=4,
                             arrowprops=dict(arrowstyle="-|>", color=color, lw=0,
-                                            mutation_scale=9))
+                                            mutation_scale=12))
         visited = [x for x in seq if x != "CN01"]
-        ax.scatter(self.points.lon[visited], self.points.lat[visited], s=30,
-                   color=[color], edgecolor="white", lw=0.6, zorder=5)
+        ax.scatter(self.points.lon[visited], self.points.lat[visited], s=size,
+                   color=[color], edgecolor="white", lw=1.0, zorder=5)
 
     def legend(self, ax, officers=None, days=None, **kw):
         officers = officers or range(1, self.K + 1)
@@ -203,11 +203,11 @@ class Plotter:
         self.save(fig, "graph")
 
     def figure_overview(self):
-        fig, ax = plt.subplots(figsize=(10, 9))
+        fig, ax = plt.subplots(figsize=(12, 11))
         setup(ax, self.points)
         draw_road(ax, self.nodes, self.shown)
         for k, t, stops in sorted(self.routes(), key=lambda r: -r[1]):
-            self.draw_route(ax, k, t, stops)
+            self.draw_route(ax, k, t, stops, lw=2.4, size=90)
         draw_depot(ax, self.points)
         self.legend(ax, loc="lower left")
         ax.set_title(f"{self.title}\nmỗi cán bộ một màu; ngày 1 đậm nhất, nhạt dần đến "
