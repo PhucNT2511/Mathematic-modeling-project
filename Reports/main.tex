@@ -144,30 +144,19 @@ claiming verified improvements in real banking operations.
 \label{sec:model}
 
 \subsection{Problem Assumptions}
-The final implementation relies on the following assumptions.
-\begin{itemize}
-\item \textbf{Full-or-zero payment.} A successful visit to customer $i$
-  collects the full target amount $w_i$; an unsuccessful visit collects
-  nothing. Partial payments are not modelled.
-\item \textbf{Conditional payment probability.} $p_{it}$ is the probability
-  that customer $i$ pays when visited on day $t$, given that the customer has
-  not paid before. Payment outcomes of different visits are conditionally
-  independent, and $p_{it}$ decreases with $t$.
-\item \textbf{Maximum visits.} Customer $i$ can be visited at most $m_i$
-  times over the horizon. All experiments use $m_i=2$.
-\item \textbf{At most one visit per customer per day}, made by exactly one
-  officer. Different visits to the same customer may be made by different
-  officers.
-\item \textbf{Officer eligibility.} Every officer may visit every customer;
-  the officers are identical except for their (equal) daily time budgets.
-\item \textbf{Daily routes.} Every active officer leaves the branch once per
-  day and returns to it before the working-time budget is exhausted. The
-  budget covers travel time and service time.
-\item \textbf{After a successful payment} the debt is settled: the amount is
-  counted once, and the customer receives no further visits. In the static
-  plan this is handled during execution (Section~\ref{sec:rolling}); in the
-  planning model it is captured by the expected value of a visit schedule.
-\end{itemize}
+A successful visit to customer $i$ collects the full target amount $w_i$ and
+an unsuccessful one collects nothing. $p_{it}$ is the probability that
+customer $i$ pays when visited on day $t$, given no earlier payment; outcomes
+of different visits are conditionally independent and $p_{it}$ decreases
+with $t$. Customer $i$ is visited at most $m_i$ times over the horizon
+($m_i=2$ in all experiments) and at most once per day, by one officer;
+different visits may be made by different officers. All officers can visit
+all customers and have equal daily budgets. Every active officer leaves the
+branch once per day and returns before the budget, which covers travel and
+service time, is used up. A customer who has paid receives no further
+visits: in the planning model this is captured by the expected value of a
+visit schedule, and during execution by skipping the customer
+(Section~\ref{sec:rolling}).
 
 \subsection{Input Data and Notation}
 Table~\ref{tab:notation} lists the notation. Money is expressed in
@@ -251,9 +240,8 @@ tolerance $\varepsilon=10^{-6}$ and minimizes the total distance:
   \label{eq:distance}
 \end{align}
 The second solve starts from the first solution and has its own time limit.
-It was \emph{not} enabled in the algorithm-comparison experiments
-(Section~\ref{sec:experiments}), where only~\eqref{eq:objective} is
-optimized. In the heuristics, distance is always used as a lexicographic
+In the experiments it is run only when the first solve is proved optimal,
+with the same time limit as the first solve. In the heuristics, distance is always used as a lexicographic
 tie-breaker between solutions with equal expected value.
 
 \subsection{Constraints}
@@ -276,42 +264,27 @@ tie-breaker between solutions with equal expected value.
 &x_{ijkt},\,y_{ikt},\,z_{kt},\,\lambda_{iS}\in\{0,1\},\quad u_{ikt}\ge 0. \label{eq:c-domain}
 \end{align}
 
-\begin{itemize}
-\item \textbf{Schedule selection}~\eqref{eq:c-schedule}: each customer gets at
-  most one schedule. The inequality allows a customer to be skipped. The
-  visit limit $m_i$ is enforced by the definition of $\mathcal S_i$.
-\item \textbf{Schedule--visit consistency}~\eqref{eq:c-link}: if the chosen
-  schedule contains day $t$, exactly one officer visits customer $i$ on that
-  day; otherwise nobody does. This also rules out two visits to the same
-  customer on the same day.
-\item \textbf{Branch departure and return}~\eqref{eq:c-depot}: an active
-  officer leaves and re-enters the branch exactly once per day; an inactive
-  officer uses no arc.
-\item \textbf{Flow conservation}~\eqref{eq:c-flow}: a visited customer has
-  exactly one incoming and one outgoing arc on the route of the officer who
-  visits them, and none on other routes.
-\item \textbf{Working-time limit}~\eqref{eq:c-time}: travel plus service time
-  of officer $k$ on day $t$ does not exceed $B_{kt}$; if $z_{kt}=0$ the officer
-  does no work that day.
-\item \textbf{Subtour elimination}~\eqref{eq:c-mtz}--\eqref{eq:c-order}: if
-  $x_{ijkt}=1$ and $j$ is visited, then $u_{jkt}\ge u_{ikt}+1$, so positions
-  strictly increase along a route and no cycle disconnected from the branch
-  can exist. The term $n(1-y_{jkt})$ deactivates the constraint when $j$ is
-  not on the route, and~\eqref{eq:c-order} forces $u_{ikt}=0$ for unvisited
-  customers.
-\item \textbf{Domains}~\eqref{eq:c-domain}.
-\end{itemize}
+Constraint~\eqref{eq:c-schedule} gives each customer at most one schedule
+(a customer may be skipped; $m_i$ is enforced through $\mathcal S_i$).
+Constraint~\eqref{eq:c-link} makes exactly one officer visit customer $i$ on
+each day of its schedule and nobody on other days.
+Constraints~\eqref{eq:c-depot}--\eqref{eq:c-flow} make an active officer
+leave and re-enter the branch once and give every visited customer one
+incoming and one outgoing arc on the route of its officer.
+Constraint~\eqref{eq:c-time} limits travel plus service time to $B_{kt}$.
+In the MTZ constraints~\eqref{eq:c-mtz}--\eqref{eq:c-order}, $x_{ijkt}=1$
+with $j$ visited forces $u_{jkt}\ge u_{ikt}+1$, so no cycle can avoid the
+branch; the term $n(1-y_{jkt})$ relaxes the constraint when $j$ is not on
+the route.
 
-\textbf{Symmetry breaking.} Officers with the same budget are interchangeable:
-relabelling two officers gives a different solution with the same value, and
-the branch-and-bound tree explores such duplicates. For consecutive officers
-with $B_{kt}=B_{k+1,t}$ the code adds
+\textbf{Symmetry breaking.} Officers with equal budgets are
+interchangeable, so the search tree contains relabelled copies of every
+solution. For consecutive officers with $B_{kt}=B_{k+1,t}$ the model adds
 \begin{equation}
 z_{kt}\ge z_{k+1,t}\qquad k=1,\dots,|K|-1,\ t\in T,
 \label{eq:c-symmetry}
 \end{equation}
-which removes duplicates without changing the optimal value. It was enabled
-in all algorithm-comparison experiments.
+which does not change the optimal value and is used in all experiments.
 
 \subsection{Rolling-Horizon Operation}
 \label{sec:rolling}
@@ -322,36 +295,19 @@ already paid and $a_{it}$ is the number of visits made to customer $i$
 before day $t$. The eligible customers are
 $A_t=\{i\in N: i\notin P_t,\ a_{it}<m_i\}$.
 
-The rolling-horizon policy repeats the following steps for $t=1,\dots,H$:
-\begin{enumerate}
-\item Build the remaining problem: customers $A_t$, days $t,\dots,H$,
-  probabilities $p_{i,t..H}$, budgets $B_{k,t..H}$, remaining visit
-  allowances $m_i-a_{it}$, and the travel sub-matrix of the branch and the
-  customers in $A_t$. The probabilities are not re-estimated: because
-  $p_{it}$ is already conditional on no earlier payment, it remains valid for
-  every customer still in $A_t$.
-\item Solve the same model~\eqref{eq:objective}--\eqref{eq:c-domain} over the
-  remaining horizon.
-\item Execute only the routes of day $t$; the plan for later days is
-  discarded.
-\item Observe the simulated payments of the visited customers, add the payers
-  to $P_{t+1}$ and increase $a_{i,t+1}$ for every visited customer.
-\end{enumerate}
-Two further policies serve as references. The \emph{static} policy solves
-once at the start and executes the whole plan; a customer who has already
-paid is skipped, and the officer goes straight to the next unpaid customer
-on the route without inserting new customers. The \emph{myopic} policy works
-like the rolling horizon but optimizes only day $t$ each morning
-($H=1$ in the remaining problem), so constraint~\eqref{eq:c-link} no longer
-links it to later days.
-
-All three policies produce feasible routes. The rolling-horizon procedure is
-\emph{not} a fully adaptive stochastic model: each re-solve maximizes the
-expected collection as if the remaining plan were executed without further
-re-planning. It does not anticipate that future decisions will depend on
-future outcomes, and it is not an optimal policy of the underlying
-multi-stage stochastic problem. Solver bounds certify only the remaining
-problem at each re-solve, not the policy.
+Each morning $t=1,\dots,H$, the rolling-horizon policy builds the remaining
+problem (customers $A_t$, days $t,\dots,H$, remaining visit allowances
+$m_i-a_{it}$), solves model~\eqref{eq:objective}--\eqref{eq:c-domain} on it,
+executes only the routes of day $t$ and records the simulated payments. The
+probabilities are not re-estimated: $p_{it}$ is already conditional on no
+earlier payment, so it stays valid for every customer in $A_t$. Two
+reference policies are compared with it. The \emph{static} policy executes
+the initial plan and skips customers who have already paid, without
+inserting new ones. The \emph{myopic} policy re-plans each morning but
+optimizes day $t$ only ($H=1$). All three policies produce feasible routes.
+The rolling horizon is not a fully adaptive stochastic model: each re-solve
+assumes that the remaining plan will be executed without further
+re-planning, so it is not an optimal policy of the multi-stage problem.
 
 % ==================== 3. SOLUTION METHODS ====================
 \section{Solution Methods}
@@ -359,27 +315,18 @@ problem at each re-solve, not the policy.
 
 \subsection{MILP Solution with HiGHS}
 The model is built with JuMP~\cite{jump2023} and solved by the
-branch-and-cut algorithm of HiGHS~\cite{highs2018}, with all of
-$x,y,z,\lambda$ declared binary. HiGHS performs presolve, solves the LP
-relaxation at the root node, adds cutting planes, runs its primal
-heuristics and branches on fractional variables, while maintaining an
-incumbent and an upper bound on~\eqref{eq:objective}. The solver stops when
-the relative gap falls below $10^{-4}$ (\texttt{mip\_rel\_gap}) or when the
-time limit is reached: 30\,s for the one-day problem and 150\,s for the
-five-day problem (Section~\ref{sec:experiments}). The HiGHS random seed is set
-to the seed of each run. The reported status is \texttt{OPTIMAL} or
-\texttt{TIME\_LIMIT}, and the bound and branch-and-bound node count are read
-from the solver after the main solve.
+branch-and-cut algorithm of HiGHS~\cite{highs2018} (presolve, LP relaxation,
+cutting planes, primal heuristics and branching). The solver stops at a
+relative gap of $10^{-4}$ or at the time limit, and its random seed is the
+seed of the run. The status, bound and node count are read after the main
+solve.
 
-\textbf{Warm start.} In the warm-started variant, an ALNS solution obtained
-with the same seed is passed to HiGHS as a MIP start (values of $x,y,z,u$
-and of the matching $\lambda_{iS}$). The ALNS time is not included in the
-solver time. If HiGHS stops without a solution at least as good as the
-start, the code returns the ALNS solution and labels the run
-\texttt{TIME\_LIMIT\_HEURISTIC\_FALLBACK}. Such a solution is reported as an
-ALNS solution, not as one found by HiGHS; this happened in 6 of the 70
-warm-started five-day runs (1 on INS\_S with 50 customers, 2 on REP1\_S and
-3 on REP2\_S). The solver bound remains valid in all cases.
+\textbf{Warm start.} In the warm-started variant, the ALNS solution of the
+same seed is passed as a MIP start (values of $x,y,z,u$ and the matching
+$\lambda_{iS}$). If HiGHS stops without a solution at least as good as the
+start, the ALNS solution is returned and labelled as such; this happened in
+6 of the 70 five-day runs (1 on INS\_S with $n=50$, 2 on REP1\_S, 3 on
+REP2\_S). The bound remains valid in all cases.
 
 \textbf{Shared heuristic framework.} The three metaheuristics below use the
 same representation: an assignment matrix
@@ -398,72 +345,36 @@ collection first, then shorter total distance. Because the order within a
 route is built by a rule rather than optimized, the heuristics may miss
 routes that the MILP can find, and they provide no optimality certificate.
 
-\subsection{Genetic Algorithm}
-\begin{itemize}
-\item \textbf{Encoding:} one individual is one matrix $G$.
-\item \textbf{Initialization:} each cell is selected for a visit with
-  probability 0.35 and assigned to a random officer; the individual is then
-  repaired.
-\item \textbf{Selection:} tournament selection of size 3, based on the
-  lexicographic comparison above.
-\item \textbf{Crossover:} uniform crossover; each cell of the child is copied
-  from one of the two parents with equal probability.
-\item \textbf{Mutation:} each cell is replaced, with probability 0.03, by 0 or
-  a random officer.
-\item \textbf{Repair and elitism:} every child is repaired; the 4 best
-  individuals are copied unchanged into the next generation.
-\item \textbf{Parameters and stopping:} population 80, at most 300
-  generations, stopping early after 50 generations without improvement of
-  the best solution.
-\end{itemize}
+All three metaheuristics stop after at most 300 iterations (generations)
+or after 50 consecutive iterations without improving the best solution.
 
-\subsection{Tabu Search}
-\begin{itemize}
-\item \textbf{Initial solution:} candidate visits $(i,t)$ are ranked by
-  $w_ip_{it}/(s_i+\tau_{0i}+\tau_{i0})$ and inserted greedily while the
-  solution stays feasible.
-\item \textbf{Neighborhood:} a move picks a random cell $(i,t)$ and changes
-  its value to ``no visit'' or to another officer, i.e.\ it adds, removes or
-  reassigns one visit. Each iteration samples 40 such moves, repairs and
-  evaluates them, and moves to the best admissible neighbor even if it is
-  worse than the current solution. A neighbor whose repair undoes the
-  proposed change is discarded.
-\item \textbf{Tabu memory:} returning a cell to its previous value is
-  forbidden for 15 iterations.
-\item \textbf{Aspiration:} a tabu move is allowed if it yields a new best
-  solution.
-\item \textbf{Stopping:} at most 300 iterations, or 50 consecutive iterations
-  without improving the best solution.
-\end{itemize}
+\textbf{Genetic algorithm.} An individual is one matrix $G$. Each cell of an
+initial individual is a visit with probability 0.35, assigned to a random
+officer. Parents are chosen by tournaments of size 3, children are formed by
+uniform crossover and mutated cell by cell with probability 0.03, every child
+is repaired, and the 4 best individuals survive unchanged. The population
+size is 80.
 
-\subsection{Adaptive Large Neighborhood Search}
-ALNS~\cite{ropke2006} removes a large part of the plan and rebuilds it.
-\begin{itemize}
-\item \textbf{Destroy operators} (remove about 20\% of the current visits):
-  random removal; worst-value removal (lowest marginal expected value);
-  related removal (a random customer and the customers closest to them);
-  route removal (part of one officer--day route).
-\item \textbf{Repair operators:} greedy insertion, which inserts the feasible
-  triple $(i,t,k)$ with the largest gain in expected value, breaking ties by
-  the smallest increase in distance; and regret-2 insertion, which favors
-  customers who lose the most if their best insertion is not used. Customers
-  not in the plan may be inserted. Insertion continues until no feasible
-  insertion remains.
-\item \textbf{Operator selection and weights:} roulette-wheel selection by
-  operator weight. Operators score 10 for a new global best, 5 for improving
-  the current solution and 1 for an accepted solution. Every 25 iterations
-  the weights are updated as $w\leftarrow 0.8\,w+0.2\,\bar\pi$, where
-  $\bar\pi$ is the mean score in the segment (floored at 0.1).
-\item \textbf{Acceptance:} simulated annealing on the score
-  $Z/\sum_i w_i - 10^{-4}\times\text{km}$, with initial temperature 0.05 and
-  cooling factor 0.995 per iteration; the best solution is still kept by the
-  lexicographic comparison.
-\item \textbf{Stopping:} at most 300 iterations, or 50 consecutive iterations
-  without improving the best solution.
-\end{itemize}
+\textbf{Tabu search.} The initial solution inserts visits $(i,t)$ greedily in
+decreasing order of $w_ip_{it}/(s_i+\tau_{0i}+\tau_{i0})$. A move sets one
+cell $(i,t)$ to ``no visit'' or to another officer, i.e.\ adds, removes or
+reassigns one visit. Each iteration samples 40 moves, repairs them and moves
+to the best admissible one, even if it is worse. Returning a cell to its
+previous value is tabu for 15 iterations, unless it gives a new best
+solution.
 
-% Add another method only if it is retained in the final project
-% and evaluated in the experiments.
+\textbf{ALNS.} ALNS~\cite{ropke2006} removes about 20\% of the visits and
+rebuilds the plan. The destroy operators are random, worst-value (lowest
+marginal value), related (a random customer and its nearest neighbors) and
+route removal; the repair operators are greedy insertion (largest gain in
+expected value, ties broken by distance) and regret-2 insertion, both run
+until no feasible insertion remains. Operators are chosen by roulette wheel;
+they score 10, 5 or 1 for a new best, an improving or an accepted solution,
+and every 25 iterations the weights are updated as
+$w\leftarrow0.8\,w+0.2\,\bar\pi$. Acceptance is simulated annealing on
+$Z/\sum_i w_i-10^{-4}\times\text{km}$ (initial temperature 0.05, cooling
+0.995); the best solution is kept by the lexicographic comparison.
+
 
 % ==================== 4. NUMERICAL EXPERIMENTS ====================
 \section{Numerical Experiments}
@@ -506,454 +417,328 @@ the two graph layers.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/graph_layers.png}
+    \includegraphics[width=0.75\linewidth]{figures/graph_layers.png}
     \caption{Left: the road network (data layer) and the fastest road path
     behind one model arc $(i,j)$. Right: the complete directed graph of the
     model (model layer) for the first 20 customers of INS\_XS.}
     \label{fig:graph}
 \end{figure}
 
-Five customer sets were generated with different seeds: MAIN (500 customers)
-and REP1--REP4 (200 each). The instances are nested
-(INS\_XS $\subset$ INS\_S $\subset$ INS\_M $\subset$ INS\_L from MAIN,
-REP$k$\_S $\subset$ REP$k$\_M from REP$k$); Table~\ref{tab:instances} lists
-their default parameters. To isolate the effect of size, the experiments fix
-$|K|=2$, $B_{kt}=8$\,h, $m_i=2$ and the base scenario, and use the first $n$
-customers of INS\_XS ($n=10,20,30$) or INS\_S ($n=50,80$). REP1\_S--REP4\_S
-(one-day problem) and REP1\_S--REP2\_S (five-day problem) are added at $n=80$
-to check that the conclusions do not depend on one customer set. INS\_M and
-INS\_L were not used in the reported experiments.
-
-\begin{table}[htbp]
-\centering
-\caption{Test instance characteristics (dataset defaults; all have a
-480-minute working day).}
-\label{tab:instances}
-\small
-\begin{tabular}{@{}lrrrr@{}}
-\toprule
-Instance & Customers & Officers & Days & Max.\ visits \\
-\midrule
-INS\_XS & 30 & 2 & 5 & 3 \\
-INS\_S  & 80 & 2 & 5 & 2 \\
-INS\_M  & 200 & 3 & 5 & 2 \\
-INS\_L  & 500 & 4 & 5 & 2 \\
-REP$k$\_S, $k=1..4$ & 80 & 2 & 5 & 2 \\
-REP$k$\_M, $k=1..4$ & 200 & 3 & 5 & 2 \\
-\bottomrule
-\end{tabular}
-\end{table}
+Five customer sets were generated with different seeds: MAIN (500
+customers) and REP1--REP4 (200 each), from which nested instances are taken
+(INS\_XS, INS\_S, INS\_M, INS\_L with 30, 80, 200 and 500 customers from
+MAIN; REP$k$\_S and REP$k$\_M with 80 and 200 from REP$k$). To isolate the
+effect of size, the experiments fix $|K|=2$, $B_{kt}=8$\,h, $m_i=2$ and the
+base scenario, and use the first $n$ customers of INS\_XS ($n=10,20,30$) or
+INS\_S ($n=50,80$). REP1\_S--REP4\_S (one day) and REP1\_S--REP2\_S (five
+days) are added at $n=80$ to check that the conclusions do not depend on one
+customer set.
 
 \subsection{Computational Environment}
-All reported experiments were run on the laptop described in
-Table~\ref{tab:environment}. The one-day and five-day experiments ran in
-parallel as two separate processes; since the HiGHS MIP solver runs almost
-serially, the two processes did not compete significantly for CPU.
-
-\begin{table}[htbp]
-\centering
-\caption{Computational environment.}
-\label{tab:environment}
-\small
-\begin{tabularx}{\linewidth}{@{}lX@{}}
-\toprule
-Item & Configuration \\
-\midrule
-Processor & Intel Core i7-1165G7, 2.80\,GHz, 4 cores / 8 threads \\
-Memory & 8\,GB \\
-Operating system & Windows 10 Home 22H2 (build 19045) \\
-Julia version & 1.13.2 (single-threaded) \\
-JuMP / HiGHS versions & JuMP 1.32.1, MathOptInterface 1.54.0; HiGHS.jl 1.26.0 (HiGHS\_jll 1.15.1) \\
-Solver threads & HiGHS default settings; the MIP search is essentially serial \\
-Code commit & \texttt{a9c6bf0}; solver code identical to \texttt{05375a4}, at which the algorithm-comparison results were committed \\
-\bottomrule
-\end{tabularx}
-\end{table}
+All experiments ran on a laptop with an Intel Core i7-1165G7 (2.80\,GHz, 4
+cores), 8\,GB of memory and Windows~10, using Julia 1.13.2, JuMP 1.32.1 and
+HiGHS.jl 1.26.0 (HiGHS 1.15.1) with default solver settings, under which the
+MIP search is essentially serial. Two experiments ran in parallel as separate
+single-threaded processes. Code, configurations and per-run results are in
+the repository~\cite{projectrepo}.
 
 \subsection{Experimental Protocol}
-\textbf{Algorithm comparison (repeated optimization runs).} The study has two
-phases, mirroring the single-period and multi-period steps of the course's
-reference problem: \emph{Phase~1} solves a one-day problem ($H=1$, so each
-customer is visited at most once and no day linking occurs) and
-\emph{Phase~2} the five-day problem ($H=5$). Each configuration is solved in
-10 independent runs $r=1,\dots,10$ with seed $2026+r$, used by every method
-of that run, and all reported values are averages over the 10 runs. The
-HiGHS time limit is proportional to the number of days, as in the reference
-problem: 30\,s in Phase~1 and $150\,\text{s}=5\times30$\,s in Phase~2, the
-same for every instance of a phase. The metaheuristics are not given a time
-limit but the same iteration budget: at most 300 iterations or generations,
-stopping after 50 consecutive iterations without improvement (parameters in
-Section~\ref{sec:methods}). In Phase~2, HiGHS is run twice per run: cold
-(no start) and warm-started from the ALNS solution of the same seed.
+\textbf{Algorithm comparison.} \emph{Phase~1} solves a one-day problem
+($H=1$, no day linking) and \emph{Phase~2} the five-day problem ($H=5$).
+Each configuration is solved in 10 independent runs $r=1,\dots,10$ with seed
+$2026+r$, shared by every method of that run; all values are averages over
+the 10 runs. The HiGHS time limit is 30\,s in Phase~1 and
+$150\,\text{s}=5\times30$\,s in Phase~2. The metaheuristics have the same
+iteration budget: at most 300 iterations or generations, stopping after 50
+consecutive iterations without improvement. In Phase~2, HiGHS is run twice
+per run, cold and warm-started from the ALNS solution of the same seed. When
+HiGHS proves optimality, the distance solve~\eqref{eq:lexi}--\eqref{eq:distance}
+follows with the same time limit. Before any timing, every method is run once
+on a five-customer instance so that Julia's compilation time is excluded.
 
-\textbf{Timing.} For HiGHS, the reported time is the wall-clock time of the
-\texttt{optimize!} call; reading the CSV files, building the instance and
-building the JuMP model are excluded, and so is the ALNS run that provides
-the warm start. For the metaheuristics, the time is the wall-clock time of
-the solver call (construction, search and repair). Julia compiles each function on
-its first call, and this compilation time is included in the first run of
-the first instance (for example, Tabu took 5.8\,s in run 1 on the
-10-customer Phase~2 instance against a mean of 0.72\,s). Total elapsed time
-per run, including model construction, was not recorded separately.
+\textbf{Timing.} The reported time is the wall-clock time of the solver call:
+\texttt{optimize!} for the main HiGHS solve, and construction, search and
+repair for the metaheuristics. Model building, the ALNS run that provides the
+warm start and the distance solve are excluded; the distance solve time is
+recorded separately~\cite{projectrepo}.
 
-\textbf{Policy comparison (Monte Carlo payment scenarios).} These scenarios
-are distinct from the repeated optimization runs: the routing method is fixed
-(ALNS, seed 2026, 300 iterations) and the uncertainty comes from the payment
-outcomes. The instance is INS\_S (80 customers, 2 officers, 5 days,
-$m_i=2$), evaluated under the three probability scenarios with 20 payment
-scenarios $s=1,\dots,20$ each. The dataset stores a uniform number
-$\xi^{(s)}_{it}\in[0,1]$ for every customer and day; a visit to customer $i$
-on day $t$ in scenario $s$ succeeds if $\xi^{(s)}_{it}<p_{it}$, and the
-outcome is only drawn when the visit is actually made. The same numbers are
-used by all policies (common random numbers), so the paired differences are
-due to the policies alone. The algorithms never see $\xi^{(s)}$ when
-planning; it is used only to generate the outcome after the routes of a day
-are chosen. In the static policy, a planned visit to a customer who has
-already paid is skipped: the officer drives straight to the next unpaid
-customer on the route, and the freed time is not used. The static plan was
-solved once per probability scenario with all 300 ALNS iterations, whereas
-each daily re-solve of the rolling-horizon and myopic policies used the
-early-stopping rule (50 iterations without improvement).
+\textbf{Budget sensitivity.} To check that the 300/50 budget does not decide
+the ranking, the Phase~2 runs on INS\_S with $n=80$ were repeated with five
+times the budget (1{,}500 iterations, 250 without improvement).
+
+\textbf{Policy comparison.} The routing method is fixed per experiment: the
+best heuristic (ALNS) and the fastest one (Tabu) of Phase~2 at $n=80$, both
+with the same 300/50 rule for the static plan and for every daily re-solve.
+The instance is INS\_S ($n=80$, $K=2$, $H=5$, $m_i=2$) under three probability
+scenarios with 20 payment scenarios each. The dataset stores a uniform number
+$\xi^{(s)}_{it}\in[0,1]$ per customer and day; a visit succeeds if
+$\xi^{(s)}_{it}<p_{it}$. All policies use the same numbers (common random
+numbers), and the planners never see them. In the static policy, a planned
+visit to a customer who has already paid is skipped and the freed time is
+not reused.
 
 \subsection{Evaluation Metrics}
 \begin{itemize}
-\item \textbf{Expected collection $Z$} (million VND): the value of
-  objective~\eqref{eq:objective} for the returned plan, i.e.\ the
-  expectation \emph{before} execution, not an amount that is certain to be
-  collected.
-\item \textbf{Simulated collected money} (million VND): the sum of $w_i$ over
-  the successful visits in one payment scenario, averaged over the scenarios.
-  Only this quantity is used to compare policies.
-\item \textbf{Distance} (km): total length of the executed routes in the
-  policy comparison. Distances were not recorded in the algorithm-comparison
-  runs, which optimize only $Z$.
-\item \textbf{Time} (s): as defined in the protocol above.
-\item \textbf{Optimality gap.} In each run, $UB^\ast$ is the tightest (smallest)
-  upper bound returned by the HiGHS calls of that run (cold and, in
-  Phase~2, warm), and the gap of every method in that run is
+\item \textbf{Expected collection $Z$}, \textbf{simulated collection}
+  (sum of $w_i$ over the successful visits in one payment scenario, used to
+  compare policies), both in million VND, and \textbf{distance} in km.
+\item \textbf{Optimality gap.} With $UB^\ast$ the tightest upper bound of the
+  HiGHS calls in a run, the gap of every method in that run is
   \begin{equation}
   \mathrm{gap}=\frac{UB^\ast-Z}{Z}\times 100\%.
   \label{eq:gap}
   \end{equation}
-  The denominator is the solution value, as in the course's reference
-  formula; values below $10^{-9}$ are reported as 0. A gap of 0 means the
-  solution is proved optimal. For the heuristics the gap is conservative:
-  when $UB^\ast$ is loose, the true distance to the optimum may be smaller. A
-  gap is reported only if both a feasible solution and a finite bound exist;
-  otherwise it is left empty and never treated as 0. In all reported runs,
-  every method returned a feasible solution and HiGHS returned a finite
-  bound.
-\item \textbf{Branch-and-bound nodes:} the HiGHS node count
-  (\texttt{MOI.NodeCount}) of the main solve; 0 or 1 means that the solver
-  stopped at the root node. N/A for the heuristics.
-\item \textbf{Optimal runs:} the number of runs, out of 10, in which HiGHS
-  reported status \texttt{OPTIMAL} (gap $\le 10^{-4}$).
+  For the heuristics the gap is conservative, since $UB^\ast$ may be loose.
+  In all 200 runs every method returned a feasible solution and HiGHS a
+  finite bound.
+\item \textbf{B\&B nodes} (\texttt{MOI.NodeCount}) of the main solve, and the
+  number of runs out of 10 with status \texttt{OPTIMAL}.
 \end{itemize}
 
 \subsection{Algorithm Comparison}
-Table~\ref{tab:algorithms} reports the main instances; the full results for
-$n=10$ and $n=20$ and per-run data are in the repository~\cite{projectrepo}.
-For $n=10$ and $n=20$ the picture is the same as for $n=30$: HiGHS is
-optimal in 10/10 runs in both phases and every metaheuristic reaches the
-optimum. Every method returned a feasible solution and HiGHS returned a
-finite bound in all 160 runs (90 in Phase~1, 70 in Phase~2), so no gap had
-to be left undefined. Distances were not recorded in these runs, so the
-table has no distance column; it shows the number of runs proved optimal
-instead.
+Table~\ref{tab:algorithms} reports the main instances; $n=10$ and $n=20$
+behave like $n=30$ (HiGHS optimal in 10/10 runs, every metaheuristic at the
+optimum), and all per-run data are in the repository~\cite{projectrepo}.
 
 \begin{table}[htbp]
 \centering
-\caption{Algorithm comparison: averages over ten runs.
-$Z$ is expected collection in million VND with its standard deviation over
-the runs in parentheses; time is in seconds. ``Warm'' is HiGHS started from
-the ALNS solution.}
+\caption{Algorithm comparison, averages over ten runs. $Z$ in million VND
+(standard deviation in parentheses), time in seconds, distance of the
+returned plan in km. ``Warm'' is HiGHS started from ALNS.}
 \label{tab:algorithms}
 \scriptsize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}llrrrrr@{}}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}llrrrrrr@{}}
 \toprule
-Instance & Method & $Z$ & Time & Gap (\%) & B\&B nodes & Optimal \\
+Instance & Method & $Z$ & Time & Gap (\%) & Nodes & Opt. & km \\
 \midrule
-\multicolumn{7}{@{}l}{\textit{Phase 1: one day, 30\,s limit}} \\
-INS\_XS, $n=30$ & HiGHS & 139.18 (0.00) & 1.76 & 0.00 & 1.0 & 10/10 \\
-        & GA    & 139.18 (0.00) & 2.75 & 0.00 & N/A & N/A \\
-        & Tabu  & 139.18 (0.00) & 1.25 & 0.00 & N/A & N/A \\
-        & ALNS  & 139.18 (0.00) & 1.05 & 0.00 & N/A & N/A \\
+\multicolumn{8}{@{}l}{\textit{Phase 1: one day, 30\,s limit}} \\
+INS\_XS, $n=30$ & HiGHS & 139.18 (0.00) & 1.96 & 0.00 & 1.0 & 10/10 & 62.6 \\
+        & GA    & 139.18 (0.00) & 3.00 & 0.00 & -- & -- & 53.3 \\
+        & Tabu  & 139.18 (0.00) & 1.37 & 0.00 & -- & -- & 53.0 \\
+        & ALNS  & 139.18 (0.00) & 1.32 & 0.00 & -- & -- & 51.2 \\
 \midrule
-INS\_S, $n=50$ & HiGHS & 68.51 (41.51) & 30.63 & 270.88 & 3.5 & 0/10 \\
-        & GA    & 200.90 (0.24) & 6.76 & 0.64 & N/A & N/A \\
-        & Tabu  & 200.83 (0.28) & 2.28 & 0.67 & N/A & N/A \\
-        & ALNS  & 200.94 (0.23) & 7.14 & 0.62 & N/A & N/A \\
+INS\_S, $n=50$ & HiGHS & 68.39 (41.62) & 30.80 & 273.14 & 3.8 & 0/10 & 33.6 \\
+        & GA    & 200.90 (0.24) & 6.77 & 0.64 & -- & -- & 64.8 \\
+        & Tabu  & 200.84 (0.28) & 2.44 & 0.67 & -- & -- & 66.2 \\
+        & ALNS  & 200.94 (0.23) & 7.03 & 0.62 & -- & -- & 64.2 \\
 \midrule
-INS\_S, $n=80$ & HiGHS & 38.44 (33.49) & 31.98 & 877.24 & 0.0 & 0/10 \\
-        & GA    & 274.32 (0.96) & 7.71 & 2.40 & N/A & N/A \\
-        & Tabu  & 273.43 (0.52) & 2.21 & 2.74 & N/A & N/A \\
-        & ALNS  & 274.81 (0.61) & 13.91 & 2.22 & N/A & N/A \\
+INS\_S, $n=80$ & HiGHS & 41.79 (30.79) & 31.60 & 862.02 & 0.0 & 0/10 & 21.1 \\
+        & GA    & 274.32 (0.96) & 7.97 & 2.40 & -- & -- & 65.5 \\
+        & Tabu  & 273.43 (0.52) & 2.50 & 2.74 & -- & -- & 68.9 \\
+        & ALNS  & 274.81 (0.61) & 14.32 & 2.22 & -- & -- & 63.6 \\
 \midrule
-\multicolumn{7}{@{}l}{\textit{Phase 2: five days, 150\,s limit}} \\
-INS\_XS, $n=30$ & HiGHS & 246.80 (0.00) & 19.62 & 0.00 & 56.5 & 10/10 \\
-        & HiGHS warm & 246.80 (0.00) & 1.94 & 0.00 & 0.0 & 10/10 \\
-        & GA    & 246.80 (0.00) & 10.21 & 0.00 & N/A & N/A \\
-        & Tabu  & 246.80 (0.00) & 2.57 & 0.00 & N/A & N/A \\
-        & ALNS  & 246.80 (0.00) & 3.54 & 0.00 & N/A & N/A \\
+\multicolumn{8}{@{}l}{\textit{Phase 2: five days, 150\,s limit}} \\
+INS\_XS, $n=30$ & HiGHS & 246.80 (0.00) & 16.85 & 0.00 & 56.5 & 10/10 & 144.0 \\
+        & HiGHS warm & 246.80 (0.00) & 1.28 & 0.00 & 0.0 & 10/10 & 103.2 \\
+        & GA    & 246.80 (0.00) & 9.85 & 0.00 & -- & -- & 107.1 \\
+        & Tabu  & 246.80 (0.00) & 2.72 & 0.00 & -- & -- & 111.5 \\
+        & ALNS  & 246.80 (0.00) & 3.14 & 0.00 & -- & -- & 103.2 \\
 \midrule
-INS\_S, $n=50$ & HiGHS & 35.82 (16.61) & 155.03 & 1{,}264.36 & 2.0 & 0/10 \\
-        & HiGHS warm & 361.90 (0.03) & 154.74 & 0.08 & 1.8 & 0/10 \\
-        & GA    & 361.59 (0.14) & 18.34 & 0.16 & N/A & N/A \\
-        & Tabu  & 361.56 (0.16) & 4.98 & 0.17 & N/A & N/A \\
-        & ALNS  & 361.90 (0.03) & 9.91 & 0.08 & N/A & N/A \\
+INS\_S, $n=50$ & HiGHS & 35.82 (16.61) & 152.79 & 1{,}264.36 & 4.1 & 0/10 & 55.5 \\
+        & HiGHS warm & 361.90 (0.03) & 152.83 & 0.08 & 3.8 & 0/10 & 216.6 \\
+        & GA    & 361.59 (0.14) & 14.31 & 0.16 & -- & -- & 266.6 \\
+        & Tabu  & 361.57 (0.16) & 4.30 & 0.17 & -- & -- & 238.7 \\
+        & ALNS  & 361.90 (0.03) & 8.03 & 0.08 & -- & -- & 216.6 \\
 \midrule
-INS\_S, $n=80$ & HiGHS & 6.99 (6.70) & 156.76 & 16{,}594.40 & 0.0 & 0/10 \\
-        & HiGHS warm & 549.04 (0.22) & 157.37 & 0.38 & 0.0 & 0/10 \\
-        & GA    & 542.49 (2.13) & 23.30 & 1.59 & N/A & N/A \\
-        & Tabu  & 545.20 (0.58) & 5.80 & 1.09 & N/A & N/A \\
-        & ALNS  & 549.04 (0.22) & 30.67 & 0.38 & N/A & N/A \\
+INS\_S, $n=80$ & HiGHS & 6.99 (6.70) & 156.64 & 16{,}594.40 & 0.0 & 0/10 & 4.2 \\
+        & HiGHS warm & 549.04 (0.22) & 156.53 & 0.38 & 0.0 & 0/10 & 329.1 \\
+        & GA    & 542.49 (2.13) & 24.12 & 1.59 & -- & -- & 336.0 \\
+        & Tabu  & 545.20 (0.58) & 6.27 & 1.09 & -- & -- & 352.1 \\
+        & ALNS  & 549.04 (0.22) & 31.79 & 0.38 & -- & -- & 329.1 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:gap-cpu} plots the mean gap and time against $n$ for all
-five sizes. Table~\ref{tab:replicates} repeats the 80-customer comparison on
-the independently generated customer sets.
-
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{figures/gap.png}\\[4pt]
-    \includegraphics[width=\linewidth]{figures/cpu_time.png}
-    \caption{Mean optimality gap (top, symmetric log scale) and mean time
-    (bottom, log scale; dashed line: HiGHS time limit) against the number of
-    customers on the MAIN set, ten runs per point.}
+    \includegraphics[width=0.85\linewidth]{figures/gap.png}
+    \caption{Mean gap (symmetric log scale) against $n$ on the MAIN set.}
     \label{fig:gap-cpu}
 \end{figure}
 
+Figure~\ref{fig:gap-cpu} plots the gap against $n$.
+Table~\ref{tab:replicates} repeats the $n=80$ comparison on independently
+generated customer sets, and Table~\ref{tab:budget} gives the budget check.
+
 \begin{table}[htbp]
 \centering
-\caption{Mean gap (\%) at $n=80$ on independent customer sets, ten runs
-each. HiGHS (cold) was not optimal in any run.}
+\begin{minipage}[t]{0.52\linewidth}
+\centering
+\caption{Mean gap (\%) at $n=80$ on independent customer sets.}
 \label{tab:replicates}
 \scriptsize
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}llrrrrr@{}}
 \toprule
-Phase & Instance & HiGHS & HiGHS warm & GA & Tabu & ALNS \\
+Ph. & Instance & HiGHS & Warm & GA & Tabu & ALNS \\
 \midrule
-1 & INS\_S  & 877.24 & \NA & 2.40 & 2.74 & 2.22 \\
-  & REP1\_S & 2{,}005.39 & \NA & 3.28 & 3.63 & 3.68 \\
-  & REP2\_S & 482.99 & \NA & 3.31 & 3.71 & 3.70 \\
-  & REP3\_S & 24{,}330.70 & \NA & 2.27 & 2.57 & 2.23 \\
-  & REP4\_S & 5{,}872.45 & \NA & 2.70 & 2.73 & 2.70 \\
+1 & INS\_S  & 862 & \NA & 2.40 & 2.74 & 2.22 \\
+  & REP1\_S & 2{,}519 & \NA & 3.28 & 3.63 & 3.68 \\
+  & REP2\_S & 1{,}112 & \NA & 3.31 & 3.71 & 3.70 \\
+  & REP3\_S & 24{,}331 & \NA & 2.27 & 2.57 & 2.23 \\
+  & REP4\_S & 5{,}911 & \NA & 2.70 & 2.73 & 2.70 \\
 \midrule
-2 & INS\_S  & 16{,}594.40 & 0.38 & 1.59 & 1.09 & 0.38 \\
-  & REP1\_S & 41{,}049.20 & 0.49 & 2.56 & 1.18 & 0.49 \\
-  & REP2\_S & 14{,}769.40 & 0.45 & 2.21 & 1.01 & 0.45 \\
+2 & INS\_S  & 16{,}594 & 0.38 & 1.59 & 1.09 & 0.38 \\
+  & REP1\_S & 41{,}049 & 0.49 & 2.56 & 1.18 & 0.49 \\
+  & REP2\_S & 14{,}769 & 0.45 & 2.21 & 1.01 & 0.45 \\
 \bottomrule
 \end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.45\linewidth}
+\centering
+\caption{Budget check, Phase~2, INS\_S, $n=80$: 300/50 against 1{,}500/250
+iterations.}
+\label{tab:budget}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{Gap (\%)} & \multicolumn{2}{c}{Time (s)} \\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Method & $1\times$ & $5\times$ & $1\times$ & $5\times$ \\
+\midrule
+GA   & 1.59 & 0.87 & 24.1 & 180.9 \\
+Tabu & 1.09 & 1.00 & 6.3 & 32.5 \\
+ALNS & 0.38 & 0.33 & 31.8 & 237.8 \\
+\bottomrule
+\end{tabular}
+\end{minipage}
 \end{table}
 
 \subsection{Static and Rolling-Horizon Comparison}
-The comparison uses INS\_S with ALNS as the routing method and 20 common
-payment scenarios per probability scenario. Table~\ref{tab:policies} reports
-means of the \emph{simulated} collection, not of the optimization objective;
-for reference, the expected value of the static plan was 287.98, 549.49 and
-783.45 million VND in the low, base and high scenarios. Time is the total
-optimization time for one scenario: the single static solve, or the sum of
-the five daily re-solves. Table~\ref{tab:paired} gives the paired
-differences with 95\% confidence intervals based on the $t$ distribution
-with 19 degrees of freedom. All statistics are produced by the runner from
-the per-scenario results~\cite{projectrepo}.
+Table~\ref{tab:paired} gives the paired differences with 95\% confidence
+intervals ($t$ distribution, 19 degrees of freedom). The expected value of
+the static ALNS plan was 287.94, 549.49 and 783.45 million VND in the low,
+base and high scenarios.
 
 \begin{table}[htbp]
 \centering
-\caption{Policy comparison on INS\_S over 20 common payment scenarios (ALNS).
-Collected amounts are in million VND; standard deviations over the
-scenarios in parentheses.}
-\label{tab:policies}
-\small
-\begin{tabular}{@{}llrrr@{}}
-\toprule
-Scenario & Policy & Mean collected & Mean km & Mean total time (s) \\
-\midrule
-Low (THAP)   & Static          & 289.62 (151.66) & 325.4 & 118.2 \\
-             & Rolling horizon & 288.41 (155.85) & 306.0 & 80.4 \\
-             & Myopic          & 289.18 (161.48) & 283.7 & 42.8 \\
-\midrule
-Base (CO\_SO) & Static          & 514.38 (207.46) & 316.0 & 106.9 \\
-             & Rolling horizon & 516.67 (203.61) & 288.3 & 60.5 \\
-             & Myopic          & 507.99 (209.02) & 261.6 & 35.5 \\
-\midrule
-High (CAO)   & Static          & 735.90 (189.66) & 310.4 & 108.6 \\
-             & Rolling horizon & 740.83 (196.05) & 285.3 & 58.1 \\
-             & Myopic          & 733.40 (204.62) & 259.6 & 27.5 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\caption{Paired differences against the static policy over the same 20
-scenarios: mean difference, 95\% confidence interval, and number of
-scenarios in which the policy is better.}
+\caption{Policy comparison on INS\_S over 20 common payment scenarios.
+Static: mean simulated collection (million VND). Rolling and myopic: mean
+paired difference against static [95\% CI], number of scenarios out of 20
+in which the policy collected more, and change in distance.}
 \label{tab:paired}
 \scriptsize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}llrrrr@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrrrrr@{}}
 \toprule
-& & \multicolumn{2}{c}{Collected (million VND)} & \multicolumn{2}{c}{Distance (km)} \\
-\cmidrule(lr){3-4}\cmidrule(l){5-6}
-Scenario & Policy & Mean [95\% CI] & Better & Mean [95\% CI] & Shorter \\
+& & & \multicolumn{2}{c}{Rolling horizon} & \multicolumn{2}{c}{Myopic} & km \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(l){8-8}
+Scen. & Method & Static & Diff [95\% CI] & Better & Diff [95\% CI] & Better & R / M \\
 \midrule
-Low   & Rolling & $-1.21$ [$-8.46$, $6.05$] & 10/20 & $-19.5$ [$-25.0$, $-13.9$] & 18/20 \\
-      & Myopic  & $-0.44$ [$-10.99$, $10.10$] & 11/20 & $-41.7$ [$-45.2$, $-38.2$] & 20/20 \\
+Low  & ALNS & 283.51 & $+4.9$ [$-3.0$, $12.8$] & 14 & $+5.7$ [$-0.6$, $11.9$] & 12 & $-5\%$ / $-12\%$ \\
+     & Tabu & 274.71 & $+9.7$ [$-0.3$, $19.8$] & 10 & $+14.3$ [$-2.3$, $31.0$] & 11 & $-6\%$ / $-17\%$ \\
 \midrule
-Base  & Rolling & $+2.28$ [$-4.28$, $8.84$] & 12/20 & $-27.7$ [$-31.9$, $-23.5$] & 20/20 \\
-      & Myopic  & $-6.40$ [$-21.09$, $8.30$] & 9/20 & $-54.4$ [$-57.8$, $-50.9$] & 20/20 \\
+Base & ALNS & 514.38 & $+2.3$ [$-4.3$, $8.8$] & 12 & $-6.4$ [$-21.1$, $8.3$] & 9 & $-9\%$ / $-17\%$ \\
+     & Tabu & 490.49 & $+4.4$ [$-13.2$, $22.0$] & 11 & $\mathbf{+19.9}$ [$3.7$, $36.2$] & 16 & $-6\%$ / $-17\%$ \\
 \midrule
-High  & Rolling & $+4.93$ [$-8.09$, $17.95$] & 11/20 & $-25.0$ [$-30.4$, $-19.7$] & 20/20 \\
-      & Myopic  & $-2.50$ [$-23.37$, $18.37$] & 9/20 & $-50.8$ [$-54.8$, $-46.8$] & 20/20 \\
+High & ALNS & 735.90 & $+4.9$ [$-8.1$, $18.0$] & 11 & $-2.5$ [$-23.4$, $18.4$] & 9 & $-8\%$ / $-16\%$ \\
+     & Tabu & 687.06 & $+12.5$ [$-13.4$, $38.4$] & 11 & $\mathbf{+47.7}$ [$20.9$, $74.4$] & 16 & $-7\%$ / $-19\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Relative to static, the rolling horizon changes the mean collection by
-$-0.4\%$, $+0.4\%$ and $+0.7\%$ and the distance by $-6.0\%$, $-8.8\%$ and
-$-8.1\%$ in the low, base and high scenarios. Compared directly with the
-myopic policy, the mean difference (rolling minus myopic) is $-0.76$,
-$+8.68$ and $+7.44$ million VND, with $|t|\le1.4$ in all three cases.
-Figure~\ref{fig:policies} summarizes the comparison.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{figures/static_vs_rolling.png}
-    \caption{Policy comparison on INS\_S. Left: mean simulated collection over
-    20 common payment scenarios (THAP = low, CO\_SO = base, CAO = high).
-    Right: paired difference against the static policy with its 95\%
-    confidence interval.}
-    \label{fig:policies}
-\end{figure}
+Per payment scenario, the optimization time was 43--57\,s for the static
+ALNS plan, 58--89\,s for the five rolling-horizon re-solves and 28--54\,s for
+the myopic ones; with Tabu the three figures were 5--9\,s, 13--19\,s and
+5--9\,s.
 
 \subsection{Discussion}
 \textbf{Small instances.} Up to 30 customers, HiGHS proves optimality in
-10/10 runs in both phases, and the three metaheuristics find the same
-optimal value in every run. The one-day problem is solved at the root node,
-whereas the five-day problem with 30 customers needs on average 56.5 nodes
-and 19.6\,s. With the same number of customers, linking the days through
-the schedule variables makes the problem clearly harder.
+10/10 runs in both phases and the three metaheuristics find the same value
+in every run. The one-day problem is solved at the root node, whereas the
+five-day problem with 30 customers needs 56.5 nodes and 16.9\,s on average:
+linking the days makes the problem much harder. Started from the ALNS
+optimum, HiGHS needs only 1.3\,s.
 
-\textbf{Behavior as size grows.} The model size grows roughly as
-$|K|\,H\,n^2$ because of the arc variables, from 2{,}012 variables
-($n=30$, one day) to 67{,}610 ($n=80$, five days). From $n=50$ on, HiGHS
-reaches its time limit after at most 3.5 nodes on average in both phases:
-almost all the
-time is spent at the root node, and the incumbent is poor (gaps of 271\% to
-16{,}594\% on INS\_S), with a large variation between runs. The bound
-itself is informative, since the heuristics lie within 0.1--3.7\% of it.
-These gaps therefore mostly reflect the solver's weak incumbent, not a weak
-bound.
+\textbf{Distance.} The distance solve did not help HiGHS. At $n=20$ and
+$n=30$ it always reached its time limit, and the cold HiGHS plan at $n=30$
+is longer than the ALNS plan with the same $Z$ (62.6 against 51.2\,km in
+Phase~1, 144.0 against 103.2\,km in Phase~2). For $n\ge50$ the cold HiGHS
+plan is short only because it visits few customers.
 
-\textbf{Quality versus runtime.} The metaheuristics reach gaps of 2.2--3.7\%
-in Phase~1 and 0.4--2.6\% in Phase~2 at $n=80$, in 2 to 40\,s. In Phase~2,
-ALNS gives the smallest gap on every instance with $n\ge50$ (0.08--0.49\%)
-and the smallest variation between runs; Tabu is the fastest (5--7\,s) with
-a gap of about 1\%; GA is slower than Tabu, and at $n=80$ it has the largest
-gap (1.6--2.6\%) and the largest variation. In Phase~1
-the three methods are within about 0.5 percentage points of each other, and
-none is best on all instances. The conclusions are the same on INS\_S and
-on the independent REP sets (Table~\ref{tab:replicates}). Since the
-heuristics stop by an iteration rule while HiGHS runs to its time limit,
-the comparison is one of quality at the observed runtime, not at equal time.
+\textbf{Behavior as size grows.} The model grows roughly as $|K|\,H\,n^2$,
+from 2{,}012 variables ($n=30$, one day) to 67{,}610 ($n=80$, five days).
+From $n=50$ on, HiGHS hits its time limit after at most 4 nodes on average,
+and its incumbent is poor (gaps of 273\% to 16{,}594\% on INS\_S) and varies
+a lot between runs. The bound is still informative: the heuristics lie
+within 0.1--3.7\% of it, so the large gaps reflect the weak incumbent, not a
+weak bound.
 
-\textbf{Warm start.} Starting HiGHS from the ALNS solution gives exactly the
-ALNS value and gap: within 150\,s HiGHS neither improves the start nor
-closes the gap. On the 30-customer instance, the warm start reduces the
-solver time from 19.6\,s to 1.9\,s, because the optimal solution is provided
-from the start.
+\textbf{Quality versus runtime.} At $n=80$ the metaheuristics reach gaps of
+2.2--3.7\% in Phase~1 and 0.4--2.6\% in Phase~2 in 2 to 42\,s. In Phase~2,
+ALNS gives the smallest gap on every instance with $n\ge50$ (0.08--0.49\%),
+the smallest variation between runs and the shortest routes; Tabu is the
+fastest (4--7\,s) at about 1\%; GA is slower than Tabu and has the largest
+gap and variation at $n=80$. In Phase~1 the three methods are within about
+0.5 percentage points and none is best everywhere. The REP sets give the
+same picture. With five times the budget (Table~\ref{tab:budget}) GA gains
+most (gap 1.59 to 0.87\%) and passes Tabu, while ALNS and Tabu gain less
+than 0.1 point at 5--7.5 times the time. ALNS stays best, so the 300/50
+budget does not change the main conclusion, but GA is the method most
+limited by it.
 
-\textbf{Benefits and limits of re-optimization.} Re-planning every day does
-not change the simulated collection significantly on INS\_S: all confidence
-intervals for the collection difference contain 0, and the rolling horizon
-is better than static in only 10--12 of the 20 scenarios. Its advantage does
-grow with the payment probability ($-0.4\%$, $+0.4\%$, $+0.7\%$), which is
-expected: more payments mean more freed capacity and more information. The
-clear benefit is travel: the rolling horizon collects about the same amount
-with 6--9\% less distance in every scenario group, because it drops planned
-repeat visits to customers who have already paid. It is also faster per
-scenario, since the remaining problems shrink. Two factors limit the gain.
-First, each re-solve optimizes an expectation as if no further re-planning
-would happen, so the policy is not optimal for the multi-stage problem.
-Second, ALNS is a heuristic, and the quality of consecutive solves varies by
-an amount comparable to the re-planning gain; in addition, the static plan
-received the full 300 ALNS iterations while each daily re-solve stopped
-early.
+For $n\ge50$, HiGHS started from ALNS returns exactly the ALNS solution:
+within 150\,s it neither improves it nor closes the gap.
 
-\textbf{Variability.} The collected money varies far more between payment
-scenarios (standard deviation 150--210 million VND) than between policies,
-which is why paired differences on common random numbers are needed. The
-myopic policy travels least, because it never plans repeat visits for later
-days, but its paired difference has a standard deviation 1.5--2.2 times that
-of the rolling horizon (22--45 against 14--28 million VND): it sometimes wins
-by a large margin and sometimes loses by one. With only 20 scenarios, none
-of the three policies can be called superior in collected money.
-
-Figure~\ref{fig:routes} shows the five-day ALNS plan for INS\_S in the base
-scenario. All 80 customers are visited, routes span most of the sampling
-area, and officer~1 visits only two customers on day~5.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=\linewidth]{figures/routes_INS_S.png}
-    \caption{Five-day ALNS plan for INS\_S (80 customers, 2 officers, base
-    scenario). Each panel is one officer's route on one day; customers are
-    numbered in visiting order, starting from and returning to the branch
-    ($\star$).}
-    \label{fig:routes}
-\end{figure}
+\textbf{Benefits and limits of re-optimization.} With ALNS, the rolling
+horizon collects 0.4--1.7\% more than static in every scenario group, but
+no confidence interval excludes 0. Its clear benefit is travel: 5--9\% less
+distance, because planned repeat visits to customers who have already paid
+are dropped. The myopic policy travels 12--17\% less, but with ALNS its collection
+difference has a standard deviation of 13--45 million VND against 14--28 for
+the rolling horizon, so it sometimes wins and sometimes loses by a large
+margin. With Tabu, the static plan is weaker (3--7\% below ALNS) and
+re-planning recovers much of the loss: the myopic policy collects
+significantly more than static in the base and high scenarios
+($+19.9$ and $+47.7$ million VND, 16/20 scenarios), reaching the level of
+the ALNS policies. The one-day problems solved by the myopic policy are
+small, where Tabu is close to the optimum, while its five-day static plan is
+not. Re-planning thus matters most when the plan it replaces is weak. Two
+factors limit the gain: each re-solve optimizes an expectation as if no
+further re-planning will happen, and the variation between heuristic solves
+is of the same order as the gain. Finally, the collection varies far more
+between payment scenarios (standard deviation 150--220 million VND) than
+between policies, so only paired differences on common random numbers can
+separate them, and with 20 scenarios only differences of about 20 million
+VND are detectable.
 
 % ==================== 5. CONCLUSION ====================
 \section{Conclusion}
 \label{sec:conclusion}
 
-This project studied a multi-officer, multi-day debt collection routing
-problem on the road network of Hanoi, with the goal of maximizing expected
-recovered money under daily working-time limits and a maximum number of
-visits per customer. The nonlinear value of repeated visits was linearized by
-selecting one precomputed visit schedule per customer, which gives a MILP
-with arc, assignment, route-activation, schedule and MTZ variables, plus
-symmetry breaking and an optional lexicographic distance objective. The
-model was solved with HiGHS and compared with a genetic algorithm, tabu
-search and ALNS, and a static plan was compared with rolling-horizon and
-myopic re-planning on common simulated payment scenarios.
+This project modelled multi-officer, multi-day debt collection routing on
+the road network of Hanoi as a MILP in which one precomputed visit schedule
+is selected per customer, solved it with HiGHS, GA, Tabu search and ALNS,
+and compared a static plan with rolling-horizon and myopic re-planning.
 
-The measured results suggest the following use of the methods. Up to 30
-customers, HiGHS proves optimality within seconds and should be preferred,
-since it provides a certificate. From 50 customers on, HiGHS does not leave
-the root node within 30--150\,s and its incumbent is unusable, although its
-bound remains useful to assess the heuristics. At this size the
-metaheuristics are the practical choice: ALNS gives the best plans for the
-five-day problem (gap 0.08--0.49\%), and Tabu gives slightly weaker plans
-several times faster. Warm-starting HiGHS from ALNS keeps the ALNS quality
-but did not improve it within the time limit. In the policy comparison on
-80 customers, daily re-planning did not change the simulated collection
-significantly, but it reduced travel distance by 6--9\%.
+Up to 30 customers, HiGHS proves optimality within seconds and should be
+preferred, since it gives a certificate. From 50 customers on, it stays at
+the root node within 30--150\,s and its incumbent is unusable, but its bound
+still measures the heuristics. At this size ALNS gives the best five-day
+plans (gap 0.08--0.49\%, also the shortest routes) and Tabu slightly weaker
+plans several times faster; five times more iterations do not change this.
+Warm-starting HiGHS from ALNS did not improve the ALNS plan. On 80
+customers, re-planning on top of ALNS did not change the simulated
+collection significantly but cut travel by 5--9\% (rolling horizon) and
+12--17\% (myopic); on top of the weaker Tabu plans, myopic re-planning raised
+the collection significantly in two of the three scenarios.
 
-These findings are limited by the data. Customer accounts are synthetic,
-the payment probabilities and their decline over time are modelling
-assumptions not calibrated on real collection outcomes, travel speeds
-ignore congestion, and payments are full or nothing. The size of the
-re-planning gain in particular depends on the assumed probabilities. The
-experiments also cover at most 80 customers and two officers, and the
-policy comparison uses only 20 payment scenarios.
-
-Two directions are realistic next steps. First, running the policy
-comparison with more scenarios (the dataset provides 100) and on the larger
-instances INS\_M and INS\_L would show whether re-planning yields a
-significant gain in collection at larger scale. Second, the heuristic
-routes could be improved and the bounds tightened, for example by stronger
-subtour-elimination cuts than MTZ or a decomposition by day, so that exact
-methods remain usable beyond 30 customers.
+The customer accounts are synthetic, the payment probabilities are not
+calibrated on real outcomes, travel speeds ignore congestion and payments
+are full or nothing; the experiments stop at 80 customers, two officers and
+20 payment scenarios. Natural next steps are the policy comparison with the
+100 scenarios of the dataset on INS\_M and INS\_L, and stronger
+subtour-elimination cuts or a decomposition by day to keep exact methods
+usable beyond 30 customers.
 
 % ==================== REFERENCES ====================
 
+\begingroup
+\small
 \begin{thebibliography}{99}
+\setlength{\itemsep}{0pt}
 
 \bibitem{projectrepo}
 N. T. Phuc and D. T. L. Huong,
@@ -1005,5 +790,6 @@ Q. Huangfu and J. A. J. Hall,
 pp.~119--142, 2018.
 
 \end{thebibliography}
+\endgroup
 
 \end{document}

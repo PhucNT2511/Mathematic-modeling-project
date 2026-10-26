@@ -1,0 +1,5 @@
+phase,instance,n,K,H,vertices,arcs,num_vars,num_constraints,method,runs,optimal_runs,best_objective,mean_objective,mean_upper_bound,mean_gap_percent,mean_cpu_seconds,std_cpu_seconds,mean_bb_nodes,statuses,std_objective,mean_total_seconds,mean_distance_km,std_distance_km,mean_visits,mean_distance_solve_seconds
+GD2_nam_ngay,INS_S,80,2,5,81,6480,67610,66915,Tabu,10,,546.366,545.653,551.126,1.00322,32.4913,5.94718,,HEURISTIC,0.479572,32.4913,352.867,5.18331,153.2,
+GD2_nam_ngay,INS_S,80,2,5,81,6480,67610,66915,ALNS,10,,549.499,549.32,551.126,0.32889,237.761,67.4001,,HEURISTIC,0.152207,237.761,312.828,12.9506,159.6,
+GD2_nam_ngay,INS_S,80,2,5,81,6480,67610,66915,GA,10,,547.621,546.385,551.126,0.868179,180.932,39.486,,HEURISTIC,1.10805,180.933,349.83,10.0656,148.3,
+GD2_nam_ngay,INS_S,80,2,5,81,6480,67610,66915,Branch-and-Cut,10,0,24.6257,6.9894,551.126,16594.8,158.432,0.611189,0,TIME_LIMIT,6.70174,158.956,4.1938,2.67541,1.1,0

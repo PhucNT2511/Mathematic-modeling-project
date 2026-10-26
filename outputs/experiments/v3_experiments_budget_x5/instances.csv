@@ -1,0 +1,2 @@
+phase,name,source_instance,customers,officers,days,max_visits,minutes_per_day,total_debt_million_vnd,num_vars,num_constraints
+GD2_nam_ngay,INS_S_n80_H5,INS_S,80,2,5,2,480,2354.09,67610,66915

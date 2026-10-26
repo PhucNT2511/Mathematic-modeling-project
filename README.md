@@ -43,15 +43,18 @@ Average over 10 runs, 80-customer instance INS_S, 2 officers:
 
 | Phase | Method | Gap | CPU |
 |---|---|---|---|
-| Phase 1 (1 day, 30 s) | Branch-and-Cut | 877% (time limit, 0 nodes) | 32 s |
+| Phase 1 (1 day, 30 s) | Branch-and-Cut | 862% (time limit, 0 nodes) | 32 s |
 | | Tabu / ALNS / GA | 2.7% / 2.2% / 2.4% | 2 / 14 / 8 s |
 | Phase 2 (5 days, 150 s) | Branch-and-Cut | 16,594% (time limit, 0 nodes) | 157 s |
-| | Tabu / ALNS / GA | 1.1% / **0.4%** / 1.6% | 6 / 31 / 23 s |
+| | Tabu / ALNS / GA | 1.1% / **0.4%** / 1.6% | 6 / 32 / 24 s |
 | | BnC + ALNS start | 0.4% | 157 s |
 
 Up to 30 customers, Branch-and-Cut proves optimality in 10/10 runs and every
-metaheuristic finds the optimal solution. Full tables:
-[docs/04_experiments.md](docs/04_experiments.md).
+metaheuristic finds the optimal solution. Five times more heuristic iterations
+do not change the ranking at the top (ALNS stays best). Daily re-planning
+cuts travel by 5–19% against a static plan; it only raises the collection
+significantly when the static plan is weak (Tabu, myopic re-planning).
+Full tables: [docs/04_experiments.md](docs/04_experiments.md).
 
 ## Repository layout
 
@@ -98,11 +101,11 @@ Run all commands from the repository root in PowerShell.
 & $julia --project=. core/test_v3_dynamic.jl
 & $julia --project=. core/run_v3_experiments.jl configs/v3_experiments_smoke.json
 
-# Main experiments: Phase 1 + Phase 2 in parallel, about 4 hours, resumable
+# Main experiments: Phase 1 + Phase 2 in parallel, about 6 hours, resumable
 powershell -ExecutionPolicy Bypass -File scripts\run_experiments.ps1
 Get-Content outputs\experiments\v3_experiments_gd2.log -Wait -Tail 20 -Encoding UTF8
 
-# Static vs rolling horizon vs myopic (about 3 hours)
+# Static vs rolling horizon vs myopic, ALNS + Tabu (about 2.5 hours)
 & $julia --project=. core/run_v3_static_vs_rolling.jl configs/v3_static_vs_rolling_report.json
 
 # One quick comparison on a single instance
@@ -125,7 +128,8 @@ config to start from scratch.
 | `v3_experiments_gd1.json` | Phase 1: H = 1, 30 s, 9 instances |
 | `v3_experiments_gd2.json` | Phase 2: H = 5, 150 s, 7 instances, plus warm start |
 | `v3_experiments_smoke.json` | Quick test, 1 run |
-| `v3_static_vs_rolling_report.json` | Three policies, 20 MC scenarios × 3 p-scenarios |
+| `v3_experiments_budget_x5.json` | Phase 2 on INS_S n = 80 with 5× the heuristic budget |
+| `v3_static_vs_rolling_report.json` | Three policies, best + fastest heuristic, 20 MC scenarios × 3 p-scenarios |
 | `v3_static_vs_rolling.json` | Same with 100 MC scenarios (about 12–15 hours) |
 | `v3_static_vs_rolling_smoke.json` | Quick test on INS_XS |
 | `v3_comparison.json` | Single comparison, rolling-horizon policy on one scenario |

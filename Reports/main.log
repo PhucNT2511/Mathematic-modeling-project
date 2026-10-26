@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.10.25)  25 OCT 2026 23:38
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.10.25)  26 OCT 2026 08:06
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -508,72 +508,55 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) (D:\miktek\tex/latex/microtype\mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
-LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 149.
- (D:\miktek\tex/latex/lm\ts1lmr.fd
-File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-) [1
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <10.95> on input line 147.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <8> on input line 147.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <6> on input line 147.
+ [1
 
 {C:/Users/DELL/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{D:/miktek/fonts/enc/dvips/lm/lm-ec.enc}{D:/miktek/fonts/enc/dvips/lm/lm-mathsy.enc}]
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10.95> on input line 149.
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <8> on input line 149.
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <6> on input line 149.
- [2{D:/miktek/fonts/enc/dvips/lm/lm-ts1.enc}{D:/miktek/fonts/enc/dvips/lm/lm-mathit.enc}{D:/miktek/fonts/enc/dvips/lm/lm-rm.enc}] [3{D:/miktek/fonts/enc/dvips/lm/lm-mathex.enc}] [4] [5] [6]
-<figures/graph_layers.png, id=184, 1011.78pt x 469.755pt>
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 200.
+ (D:\miktek\tex/latex/lm\ts1lmr.fd
+File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+) [2{D:/miktek/fonts/enc/dvips/lm/lm-mathit.enc}{D:/miktek/fonts/enc/dvips/lm/lm-rm.enc}{D:/miktek/fonts/enc/dvips/lm/lm-ts1.enc}] [3{D:/miktek/fonts/enc/dvips/lm/lm-mathex.enc}] [4] [5]
+<figures/graph_layers.png, id=161, 1011.78pt x 469.755pt>
 File: figures/graph_layers.png Graphic file (type png)
 <use figures/graph_layers.png>
-Package pdftex.def Info: figures/graph_layers.png  used on input line 509.
-(pdftex.def)             Requested size: 455.24411pt x 211.36629pt.
- [7 <./figures/graph_layers.png>] [8] [9]
-<figures/gap.png, id=217, 867.24pt x 332.01688pt>
+Package pdftex.def Info: figures/graph_layers.png  used on input line 420.
+(pdftex.def)             Requested size: 341.43307pt x 158.52472pt.
+ [6 <./figures/graph_layers.png>]
+<figures/gap.png, id=175, 859.16277pt x 324.78989pt>
 File: figures/gap.png Graphic file (type png)
 <use figures/gap.png>
-Package pdftex.def Info: figures/gap.png  used on input line 721.
-(pdftex.def)             Requested size: 455.24411pt x 174.28613pt.
-<figures/cpu_time.png, id=218, 867.24pt x 332.01688pt>
-File: figures/cpu_time.png Graphic file (type png)
-<use figures/cpu_time.png>
-Package pdftex.def Info: figures/cpu_time.png  used on input line 722.
-(pdftex.def)             Requested size: 455.24411pt x 174.28613pt.
- [10] [11 <./figures/gap.png> <./figures/cpu_time.png>]
-<figures/static_vs_rolling.png, id=238, 867.24pt x 332.01688pt>
-File: figures/static_vs_rolling.png Graphic file (type png)
-<use figures/static_vs_rolling.png>
-Package pdftex.def Info: figures/static_vs_rolling.png  used on input line 826.
-(pdftex.def)             Requested size: 455.24411pt x 174.28613pt.
- [12]
-<figures/routes_INS_S.png, id=247, 1662.21pt x 722.7pt>
-File: figures/routes_INS_S.png Graphic file (type png)
-<use figures/routes_INS_S.png>
-Package pdftex.def Info: figures/routes_INS_S.png  used on input line 903.
-(pdftex.def)             Requested size: 455.24411pt x 197.93259pt.
- [13 <./figures/static_vs_rolling.png>] [14 <./figures/routes_INS_S.png>]
-Underfull \hbox (badness 1194) in paragraph at lines 965--970
-[]\T1/lmr/m/n/10.95 (+20) OpenStreetMap con-trib-u-tors, \T1/lmr/m/it/10.95 (+20) Open-StreetMap data for Viet-nam \T1/lmr/m/n/10.95 (+20) (Ge-o-fab-rik ex-tract
+Package pdftex.def Info: figures/gap.png  used on input line 555.
+(pdftex.def)             Requested size: 386.96027pt x 146.28294pt.
+ [7 <./figures/gap.png>] [8] [9]
+Underfull \hbox (badness 10000) in paragraph at lines 750--755
+[]\T1/lmr/m/n/10 (+20) OpenStreetMap con-trib-u-tors, \T1/lmr/m/it/10 (+20) Open-StreetMap data for Viet-nam \T1/lmr/m/n/10 (+20) (Ge-o-fab-rik ex-tract
  []
 
-[15] (main.aux)
+[10] (main.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-12-24>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: 853BFAF05A25B5C9B217B7E5F0A0AFCD;3451.
+(rerunfilecheck)             Checksum: 1E42127C45DE3949C8BA4FFEBD57A115;2952.
  ) 
 Here is how much of TeX's memory you used:
- 13959 strings out of 467870
- 212596 string characters out of 5435192
- 690623 words of memory out of 5000000
- 42334 multiletter control sequences out of 15000+600000
- 702903 words of font info for 202 fonts, out of 8000000 for 9000
+ 13947 strings out of 467870
+ 212079 string characters out of 5435192
+ 701813 words of memory out of 5000000
+ 42315 multiletter control sequences out of 15000+600000
+ 725625 words of font info for 218 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,11n,79p,1034b,605s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<D:/miktek/fonts/type1/public/lm/lmbx10.pfb><D:/miktek/fonts/type1/public/lm/lmbx12.pfb><D:/miktek/fonts/type1/public/lm/lmex10.pfb><D:/miktek/fonts/type1/public/lm/lmmi10.pfb><D:/miktek/fonts/type1/public/lm/lmmi6.pfb><D:/miktek/fonts/type1/public/lm/lmmi7.pfb><D:/miktek/fonts/type1/public/lm/lmmi8.pfb><D:/miktek/fonts/type1/public/lm/lmr10.pfb><D:/miktek/fonts/type1/public/lm/lmr8.pfb><D:/miktek/fonts/type1/public/lm/lmri10.pfb><D:/miktek/fonts/type1/public/lm/lmri8.pfb><D:/miktek/fonts/type1/public/lm/lmsy10.pfb><D:/miktek/fonts/type1/public/lm/lmsy8.pfb><D:/miktek/fonts/type1/public/lm/lmtt10.pfb><D:/miktek/fonts/type1/public/lm/lmtt8.pfb>
-Output written on main.pdf (15 pages, 4501829 bytes).
+ 75i,11n,79p,1034b,471s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<D:/miktek/fonts/type1/public/lm/lmbx10.pfb><D:/miktek/fonts/type1/public/lm/lmbx12.pfb><D:/miktek/fonts/type1/public/lm/lmbx8.pfb><D:/miktek/fonts/type1/public/lm/lmex10.pfb><D:/miktek/fonts/type1/public/lm/lmmi10.pfb><D:/miktek/fonts/type1/public/lm/lmmi6.pfb><D:/miktek/fonts/type1/public/lm/lmmi7.pfb><D:/miktek/fonts/type1/public/lm/lmmi8.pfb><D:/miktek/fonts/type1/public/lm/lmr10.pfb><D:/miktek/fonts/type1/public/lm/lmr8.pfb><D:/miktek/fonts/type1/public/lm/lmri10.pfb><D:/miktek/fonts/type1/public/lm/lmri8.pfb><D:/miktek/fonts/type1/public/lm/lmsy10.pfb><D:/miktek/fonts/type1/public/lm/lmsy8.pfb><D:/miktek/fonts/type1/public/lm/lmtt10.pfb><D:/miktek/fonts/type1/public/lm/lmtt8.pfb>
+Output written on main.pdf (10 pages, 1362595 bytes).
 PDF statistics:
- 363 PDF objects out of 1000 (max. 8388607)
- 76 named destinations out of 1000 (max. 500000)
- 40650 words of extra memory for PDF output out of 42996 (max. 10000000)
+ 306 PDF objects out of 1000 (max. 8388607)
+ 60 named destinations out of 1000 (max. 500000)
+ 54947 words of extra memory for PDF output out of 61914 (max. 10000000)
 
