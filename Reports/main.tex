@@ -725,6 +725,19 @@ collection significantly but cut travel by 5--9\% (rolling horizon) and
 12--17\% (myopic); on top of the weaker Tabu plans, myopic re-planning raised
 the collection significantly in two of the three scenarios.
 
+Three lessons follow. First, a fast heuristic re-run every morning can
+replace a strong one run once: Tabu with myopic re-planning collected within
+2\% of the static ALNS plan in every scenario, with 8--12\% less travel and
+5--10 times less computation. Second, the difficulty comes from linking the
+days rather than from the number of customers, since with 30 customers the
+one-day problem is solved at the root node while the five-day one needs 56
+nodes; a decomposition by day is therefore the natural way to scale the
+exact model. Third, HiGHS fails at finding good integer solutions, not at
+bounding: its bound shows the heuristics to be at most 0.1--3.7\% from the
+optimum,
+so the practical combination is a heuristic for the plan and the MILP bound
+as its quality certificate.
+
 The customer accounts are synthetic, the payment probabilities are not
 calibrated on real outcomes, travel speeds ignore congestion and payments
 are full or nothing; the experiments stop at 80 customers, two officers and
